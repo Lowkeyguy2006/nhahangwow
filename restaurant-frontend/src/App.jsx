@@ -5,7 +5,8 @@ import Staff from "./pages/admin/Staff";
 import MenuPage from "./pages/admin/Menu";
 import KitchenPage from "./pages/admin/Kitchen";
 import ReportsPage from "./pages/admin/Report";
-<Route path="/admin/kitchen" element={<PrivateRoute><KitchenPage /></PrivateRoute>} />
+import SettingsPage from "./pages/admin/Settings";
+
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" />;
@@ -21,6 +22,8 @@ export default function App() {
         <Route path="/admin/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>}/>
         <Route path="/admin/kitchen" element={<PrivateRoute><KitchenPage /></PrivateRoute>} />
         <Route path="/admin/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+        <Route path="/admin/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+        <Route path="/admin/setting" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   );
