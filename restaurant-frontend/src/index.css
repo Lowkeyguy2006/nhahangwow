@@ -54,11 +54,11 @@
   }
 
   .admin-primary-btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-[0_14px_26px_rgba(4,120,87,0.2)] active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none;
   }
 
   .admin-secondary-btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-sm active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .admin-field {
@@ -91,5 +91,52 @@
 
   .admin-table tbody tr {
     @apply transition-colors hover:bg-slate-50;
+  }
+
+  .admin-lift {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.09)];
+  }
+
+  .admin-soft-grid {
+    background-image:
+      linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .admin-live-dot {
+    @apply relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500;
+  }
+
+  .admin-live-dot::after {
+    content: "";
+    @apply absolute inset-0 rounded-full bg-emerald-500;
+    animation: admin-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}
+
+@keyframes admin-ping {
+  75%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-primary-btn,
+  .admin-secondary-btn,
+  .admin-lift {
+    transition: none;
+  }
+
+  .admin-primary-btn:hover,
+  .admin-secondary-btn:hover,
+  .admin-lift:hover {
+    transform: none;
+  }
+
+  .admin-live-dot::after {
+    animation: none;
   }
 }

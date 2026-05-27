@@ -12,7 +12,7 @@ const StatCard = ({ label, value, helper, icon: Icon, tone = "emerald" }) => {
   }[tone];
 
   return (
-    <div className="admin-panel-pad">
+    <div className="admin-panel-pad admin-lift">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-bold text-slate-500">{label}</p>
@@ -39,12 +39,12 @@ function TableSkeleton() {
 
 function EmptyOrders() {
   return (
-    <div className="flex min-h-56 flex-col items-center justify-center rounded-xl bg-gray-50 px-6 py-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
-        #
+    <div className="flex min-h-56 flex-col items-center justify-center rounded-xl bg-slate-50 px-6 py-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
+        <ForkKnife size={24} weight="duotone" />
       </div>
-      <p className="mt-4 font-semibold text-gray-900">Chưa có đơn hàng đang mở</p>
-      <p className="mt-2 max-w-sm text-sm text-gray-500">
+      <p className="mt-4 font-black text-slate-900">Ca này đang yên ắng</p>
+      <p className="mt-2 max-w-sm text-sm font-semibold text-slate-500">
         Khi có đơn mới hoặc bàn đang phục vụ, trạng thái sẽ xuất hiện ở đây.
       </p>
     </div>

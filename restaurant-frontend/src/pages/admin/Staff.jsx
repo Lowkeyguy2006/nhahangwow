@@ -121,7 +121,7 @@ export default function Staff() {
 
         <section className="grid gap-5 xl:grid-cols-3">
           {roleCounts.map((role) => (
-            <article key={role.id} className="admin-panel-pad">
+            <article key={role.id} className="admin-panel-pad admin-lift">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-black text-slate-900">{role.label}</p>

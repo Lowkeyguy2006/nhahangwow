@@ -32,7 +32,7 @@ function MetricCard({ label, value, helper, icon: Icon, tone = "emerald" }) {
   }[tone];
 
   return (
-    <article className="admin-panel-pad">
+    <article className="admin-panel-pad admin-lift">
       <div className="flex items-start justify-between gap-5">
         <div>
           <p className="text-sm font-bold text-slate-500">{label}</p>
