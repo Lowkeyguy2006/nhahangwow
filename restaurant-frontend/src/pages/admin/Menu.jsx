@@ -18,8 +18,10 @@ const STATUS_COLOR = {
 export default function MenuPage() {
   const [menu, setMenu] = useState([]);
   const [ingredients, setIngredients] = useState([]);
+  const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [recipePreviewItem, setRecipePreviewItem] = useState(null);
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -42,14 +44,16 @@ export default function MenuPage() {
 
     const loadData = async () => {
       try {
-        const [menuRes, ingredientsRes] = await Promise.all([
+        const [menuRes, ingredientsRes, recipesRes] = await Promise.all([
           API.get("/api/menu"),
           API.get("/api/inventory"),
+          API.get("/api/inventory/recipes"),
         ]);
 
         if (isMounted) {
           setMenu(menuRes.data || []);
           setIngredients(ingredientsRes.data || []);
+          setRecipes(recipesRes.data || []);
         }
       } catch (err) {
         if (isMounted) {
@@ -79,8 +83,12 @@ export default function MenuPage() {
 
   const fetchMenu = async () => {
     try {
-      const res = await API.get("/api/menu");
-      setMenu(res.data || []);
+      const [menuRes, recipesRes] = await Promise.all([
+        API.get("/api/menu"),
+        API.get("/api/inventory/recipes"),
+      ]);
+      setMenu(menuRes.data || []);
+      setRecipes(recipesRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -90,6 +98,23 @@ export default function MenuPage() {
 
   const getIngredient = (id) =>
     ingredients.find((ingredient) => String(ingredient.id) === String(id));
+
+  const getMenuItemRecipes = (menuItemId) =>
+    recipes.filter((recipe) => String(recipe.menu_item_id) === String(menuItemId));
+
+  const showRecipePreview = (item) => {
+    setRecipePreviewItem({
+      ...item,
+      recipes: getMenuItemRecipes(item.id),
+    });
+  };
+
+  const handleRecipePreviewKeyDown = (event, item) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      showRecipePreview(item);
+    }
+  };
 
   const resetForm = () => {
     setForm({ name: "", price: "", description: "", category_id: 1, image_url: "" });
@@ -170,6 +195,11 @@ export default function MenuPage() {
 
   const formatMoney = (amount) =>
     new Intl.NumberFormat("vi-VN").format(amount) + "đ";
+
+  const formatAmount = (amount) =>
+    new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(
+      Number(amount) || 0,
+    );
 
   const getCategoryLabel = (id) =>
     categories.find((c) => c.id === id)?.label || "N/A";
@@ -276,9 +306,15 @@ export default function MenuPage() {
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      {/* Thông tin món */}
+                  paginated.map((item) => {
+                    return (
+                    <tr
+                      key={item.id}
+                      tabIndex={0}
+                      onClick={() => showRecipePreview(item)}
+                      onKeyDown={(event) => handleRecipePreviewKeyDown(event, item)}
+                      className="group cursor-pointer outline-none transition-colors hover:bg-green-50/40 focus:bg-green-50/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-400 focus-within:bg-green-50/50"
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
@@ -292,7 +328,12 @@ export default function MenuPage() {
                           </div>
                           <div>
                             <p className="font-medium text-gray-800 text-sm">{item.name}</p>
-                            <p className="text-xs text-gray-400">SKU: DF-{String(item.id).padStart(4, "0")}</p>
+                            <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
+                              <span>SKU: DF-{String(item.id).padStart(4, "0")}</span>
+                              <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-600">
+                                Nhấp xem công thức
+                              </span>
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -331,14 +372,20 @@ export default function MenuPage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleToggle(item.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggle(item.id);
+                            }}
                             className="text-xs text-blue-500 hover:text-blue-700"
                           >
                             {item.is_visible ? "Ẩn" : "Hiện"}
                           </button>
                           <span className="text-gray-200">|</span>
                           <button
-                            onClick={() => handleDelete(item.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id);
+                            }}
                             className="text-xs text-red-400 hover:text-red-600"
                           >
                             Xóa
@@ -346,7 +393,8 @@ export default function MenuPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -391,6 +439,81 @@ export default function MenuPage() {
           </div>
         </div>
       </div>
+
+      {recipePreviewItem && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/20 px-4 py-6 backdrop-blur-[1px]"
+          onClick={() => setRecipePreviewItem(null)}
+        >
+          <div
+            className="w-[min(94vw,620px)] max-h-[min(76vh,620px)] overflow-hidden rounded-2xl border border-green-100 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-gray-900/5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-gray-100 bg-gradient-to-b from-green-50/80 to-white px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-green-600">
+                    Công thức món
+                  </p>
+                  <h3 className="mt-1 truncate text-xl font-bold text-gray-900">
+                    {recipePreviewItem.name}
+                  </h3>
+                  <p className="mt-1 text-sm font-medium text-gray-500">
+                    {getCategoryLabel(recipePreviewItem.category_id)} · {formatMoney(recipePreviewItem.price)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full border border-green-200 bg-white px-3 py-1.5 text-xs font-semibold text-green-600 shadow-sm">
+                    {recipePreviewItem.recipes.length} nguyên liệu
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRecipePreviewItem(null)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    aria-label="Đóng công thức"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-h-[calc(min(76vh,620px)-96px)] overflow-y-auto p-5">
+              {recipePreviewItem.recipes.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center">
+                  <p className="text-sm font-semibold text-gray-700">
+                    Chưa có nguyên liệu
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Thêm nguyên liệu trong form món mới để công thức hiện ở đây.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {recipePreviewItem.recipes.map((recipe, index) => (
+                    <article
+                      key={recipe.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/80 px-3.5 py-3 shadow-sm"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-bold text-green-600 ring-1 ring-gray-100">
+                          {index + 1}
+                        </span>
+                        <p className="truncate text-sm font-semibold text-gray-800">
+                          {recipe.ingredient_name}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-green-600 ring-1 ring-green-100">
+                        {formatAmount(recipe.amount)} {recipe.unit}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Thêm món */}
       {showForm && (
