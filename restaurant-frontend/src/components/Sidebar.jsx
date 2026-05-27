@@ -1,4 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { CaretDown, SignOut, UserCircle } from "@phosphor-icons/react";
+import { useState } from "react";
 
 const menuItems = [
   { path: "/admin/dashboard", label: "Tổng quan" },
@@ -15,6 +17,8 @@ const menuItems = [
 export default function Sidebar() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const displayName = user.full_name || "Admin";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -24,16 +28,47 @@ export default function Sidebar() {
 
   return (
     <div className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col">
-      {/* Logo */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+      <div className="relative p-3 border-b border-gray-100">
+        <button
+          type="button"
+          onClick={() => setAccountOpen((open) => !open)}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+          aria-expanded={accountOpen}
+          aria-haspopup="menu"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-50 text-green-600">
+            {displayName ? (
+              <span className="text-sm font-semibold">{displayName.charAt(0).toUpperCase()}</span>
+            ) : (
+              <UserCircle size={22} weight="duotone" />
+            )}
           </div>
-          <div>
-            <p className="font-bold text-gray-800 text-sm">DineFlow</p>
-            <p className="text-xs text-gray-400">Bộ Quản lý</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-gray-800">{displayName}</p>
+            <p className="text-xs text-gray-400">Admin</p>
           </div>
-        </div>
+          <CaretDown
+            size={16}
+            className={`text-gray-400 transition-transform ${accountOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {accountOpen && (
+          <div
+            role="menu"
+            className="absolute left-3 right-3 top-[68px] z-20 rounded-lg border border-gray-100 bg-white p-1 shadow-lg"
+          >
+            <button
+              type="button"
+              onClick={handleLogout}
+              role="menuitem"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+            >
+              <SignOut size={18} />
+              Đăng xuất
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Menu */}
@@ -56,30 +91,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* User + Logout */}
-      <div className="p-3 border-t border-gray-100">
-        <div className="flex items-center gap-2 px-3 py-2 mb-2">
-          <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center">
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-800">{user.full_name}</p>
-            <p className="text-xs text-gray-400">Admin</p>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          Đăng xuất
-        </button>
-      </div>
-
-      {/* Tạo đơn mới */}
-      <div className="p-3">
-        <button className="w-full bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-          + Tạo Đơn Mới
-        </button>
-      </div>
     </div>
   );
 }
