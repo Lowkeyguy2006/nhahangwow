@@ -3,47 +3,13 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle,
-  Clock,
-  CookingPot,
+  MagnifyingGlass,
   Package,
   Plus,
   WarningCircle,
 } from "@phosphor-icons/react";
 import Layout from "../../components/Layout";
 import API from "../../services/api";
-
-const STATUS = {
-  cho: {
-    label: "Chờ nấu",
-    color: "bg-amber-100 text-amber-700",
-    next: "dang_nau",
-    nextLabel: "Bắt đầu nấu",
-  },
-  dang_nau: {
-    label: "Đang nấu",
-    color: "bg-blue-100 text-blue-700",
-    next: "hoan_thanh",
-    nextLabel: "Hoàn thành",
-  },
-  hoan_thanh: {
-    label: "Hoàn thành",
-    color: "bg-emerald-100 text-emerald-700",
-    next: null,
-    nextLabel: null,
-  },
-  huy: {
-    label: "Đã hủy",
-    color: "bg-red-100 text-red-700",
-    next: null,
-    nextLabel: null,
-  },
-};
-
-const kitchenTabs = [
-  { key: "cho", label: "Chờ nấu", icon: Clock },
-  { key: "dang_nau", label: "Đang nấu", icon: CookingPot },
-  { key: "hoan_thanh", label: "Hoàn thành", icon: CheckCircle },
-];
 
 const emptyIngredientForm = {
   name: "",
@@ -59,20 +25,6 @@ const emptyMovementForm = {
 
 const formatNumber = (value) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(Number(value) || 0);
-
-const getTimeDiff = (createdAt) => {
-  const diff = Math.floor((new Date() - new Date(createdAt)) / 60000);
-  if (diff < 1) return "Vừa xong";
-  if (diff < 60) return `${diff} phút trước`;
-  return `${Math.floor(diff / 60)} giờ trước`;
-};
-
-const getTimeColor = (createdAt) => {
-  const diff = Math.floor((new Date() - new Date(createdAt)) / 60000);
-  if (diff > 20) return "text-red-600 font-semibold";
-  if (diff > 10) return "text-amber-600 font-semibold";
-  return "text-gray-500";
-};
 
 function StockBadge({ ingredient }) {
   const quantity = Number(ingredient.quantity) || 0;
@@ -113,30 +65,17 @@ function StatCard({ label, value, icon: Icon, tone = "emerald" }) {
 }
 
 export default function KitchenPage() {
-  const [orders, setOrders] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [inventoryLoading, setInventoryLoading] = useState(true);
-  const [filter, setFilter] = useState("cho");
-  const [updating, setUpdating] = useState(null);
   const [ingredientForm, setIngredientForm] = useState(emptyIngredientForm);
   const [movementForm, setMovementForm] = useState(emptyMovementForm);
+  const [ingredientSearch, setIngredientSearch] = useState("");
+  const [ingredientDropdownOpen, setIngredientDropdownOpen] = useState(false);
   const [submittingIngredient, setSubmittingIngredient] = useState(false);
   const [submittingMovement, setSubmittingMovement] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-
-  const fetchKitchenOrders = async (shouldUpdate = () => true) => {
-    try {
-      const res = await API.get("/api/orders/kitchen");
-      if (shouldUpdate()) setOrders(res.data || []);
-    } catch {
-      if (shouldUpdate()) setError("Không tải được danh sách món trong bếp.");
-    } finally {
-      if (shouldUpdate()) setLoading(false);
-    }
-  };
 
   const fetchInventory = async (shouldUpdate = () => true) => {
     try {
@@ -153,6 +92,7 @@ export default function KitchenPage() {
           ...current,
           ingredient_id: current.ingredient_id || nextIngredients[0]?.id || "",
         }));
+        setIngredientSearch((current) => current || nextIngredients[0]?.name || "");
       }
     } catch {
       if (shouldUpdate()) setError("Không tải được dữ liệu kho nguyên liệu.");
@@ -166,32 +106,14 @@ export default function KitchenPage() {
     const shouldUpdate = () => isMounted;
 
     const initialLoad = setTimeout(() => {
-      fetchKitchenOrders(shouldUpdate);
       fetchInventory(shouldUpdate);
     }, 0);
-
-    const interval = setInterval(() => fetchKitchenOrders(shouldUpdate), 15000);
 
     return () => {
       isMounted = false;
       clearTimeout(initialLoad);
-      clearInterval(interval);
     };
   }, []);
-
-  const filteredOrders = useMemo(
-    () => orders.filter((order) => order.status === filter),
-    [orders, filter],
-  );
-
-  const counts = useMemo(
-    () => ({
-      cho: orders.filter((order) => order.status === "cho").length,
-      dang_nau: orders.filter((order) => order.status === "dang_nau").length,
-      hoan_thanh: orders.filter((order) => order.status === "hoan_thanh").length,
-    }),
-    [orders],
-  );
 
   const inventoryStats = useMemo(() => {
     const lowStock = ingredients.filter(
@@ -206,6 +128,29 @@ export default function KitchenPage() {
       healthy: Math.max(ingredients.length - lowStock - outStock, 0),
     };
   }, [ingredients]);
+
+  const selectedIngredient = useMemo(
+    () => ingredients.find((ingredient) => String(ingredient.id) === String(movementForm.ingredient_id)),
+    [ingredients, movementForm.ingredient_id],
+  );
+
+  const searchedIngredients = useMemo(() => {
+    const query = ingredientSearch.trim().toLowerCase();
+    if (!query) return ingredients;
+
+    return ingredients.filter((ingredient) =>
+      `${ingredient.name} ${ingredient.unit}`.toLowerCase().includes(query),
+    );
+  }, [ingredients, ingredientSearch]);
+
+  const handleSelectIngredient = (ingredient) => {
+    setMovementForm((current) => ({
+      ...current,
+      ingredient_id: ingredient.id,
+    }));
+    setIngredientSearch(ingredient.name);
+    setIngredientDropdownOpen(false);
+  };
 
   const handleCreateIngredient = async (event) => {
     event.preventDefault();
@@ -253,31 +198,11 @@ export default function KitchenPage() {
     }
   };
 
-  const handleUpdateStatus = async (orderId, itemId, nextStatus) => {
-    setUpdating(itemId);
-    setError("");
-
-    try {
-      await API.patch(`/api/orders/${orderId}/items/${itemId}/status`, {
-        status: nextStatus,
-      });
-      await fetchKitchenOrders();
-    } catch {
-      setError("Không cập nhật được trạng thái món.");
-    } finally {
-      setUpdating(null);
-    }
-  };
-
   return (
     <Layout>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-emerald-700">Nhà bếp</p>
-          <h1 className="text-2xl font-bold text-gray-900">Kho nguyên liệu và hàng chờ bếp</h1>
-          <p className="max-w-3xl text-sm text-gray-500">
-            Kiểm tra tồn kho trước khi xử lý món, nhập xuất nguyên liệu nhanh và cập nhật trạng thái chế biến trong cùng một màn hình.
-          </p>
         </header>
 
         {notice ? (
@@ -294,9 +219,6 @@ export default function KitchenPage() {
         <section className="space-y-4" aria-label="Quản lý kho nguyên liệu">
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-bold text-gray-900">Quản lý kho nguyên liệu</h2>
-            <p className="text-sm text-gray-500">
-              Mục này được đặt trước để bếp kiểm tra nguyên liệu thiếu hoặc nhập xuất kho ngay đầu ca.
-            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -408,34 +330,90 @@ export default function KitchenPage() {
                     })}
                   </div>
 
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Nguyên liệu
-                    <select
-                      value={movementForm.ingredient_id}
-                      onChange={(event) => setMovementForm({ ...movementForm, ingredient_id: event.target.value })}
-                      className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                      required
-                    >
-                      <option value="">Chọn nguyên liệu</option>
-                      {ingredients.map((ingredient) => (
-                        <option key={ingredient.id} value={ingredient.id}>
-                          {ingredient.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Nguyên liệu</p>
+                    <div className="relative mt-1">
+                      <MagnifyingGlass
+                        size={18}
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                      <input
+                        type="search"
+                        value={ingredientSearch}
+                        onFocus={() => setIngredientDropdownOpen(true)}
+                        onBlur={() => {
+                          setTimeout(() => setIngredientDropdownOpen(false), 120);
+                        }}
+                        onChange={(event) => {
+                          setIngredientSearch(event.target.value);
+                          setIngredientDropdownOpen(true);
+                          if (selectedIngredient && event.target.value !== selectedIngredient.name) {
+                            setMovementForm((current) => ({ ...current, ingredient_id: "" }));
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") setIngredientDropdownOpen(false);
+                        }}
+                        placeholder="Tìm nguyên liệu..."
+                        className="min-h-11 w-full rounded-lg border border-gray-200 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                        required
+                      />
+
+                      {ingredientDropdownOpen ? (
+                        <div
+                          className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-100 bg-white p-2 shadow-xl"
+                          onMouseDown={(event) => event.preventDefault()}
+                        >
+                          {searchedIngredients.length === 0 ? (
+                            <div className="px-3 py-6 text-center">
+                              <p className="text-sm font-semibold text-gray-900">Không tìm thấy nguyên liệu</p>
+                              <p className="mt-1 text-xs text-gray-500">Thử từ khóa khác hoặc thêm nguyên liệu mới.</p>
+                            </div>
+                          ) : (
+                            searchedIngredients.map((ingredient) => (
+                              <button
+                                key={ingredient.id}
+                                type="button"
+                                onClick={() => handleSelectIngredient(ingredient)}
+                                className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                                  String(movementForm.ingredient_id) === String(ingredient.id)
+                                    ? "bg-emerald-50"
+                                    : "hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-900">{ingredient.name}</p>
+                                    <p className="mt-0.5 text-xs text-gray-500">
+                                      Tồn: {formatNumber(ingredient.quantity)} {ingredient.unit}
+                                    </p>
+                                  </div>
+                                  <StockBadge ingredient={ingredient} />
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
 
                   <label className="block text-sm font-semibold text-gray-700">
                     Số lượng
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={movementForm.quantity}
-                      onChange={(event) => setMovementForm({ ...movementForm, quantity: event.target.value })}
-                      className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                      required
-                    />
+                    <div className="mt-1 flex min-h-11 overflow-hidden rounded-lg border border-gray-200 focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-100">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={movementForm.quantity}
+                        onChange={(event) => setMovementForm({ ...movementForm, quantity: event.target.value })}
+                        className="min-w-0 flex-1 px-3 text-sm font-normal outline-none"
+                        required
+                      />
+                      <span className="flex items-center border-l border-gray-200 bg-gray-50 px-3 text-sm font-semibold text-gray-600">
+                        {selectedIngredient?.unit || "đơn vị"}
+                      </span>
+                    </div>
                   </label>
 
                   <label className="block text-sm font-semibold text-gray-700">
@@ -451,7 +429,7 @@ export default function KitchenPage() {
 
                   <button
                     type="submit"
-                    disabled={submittingMovement || ingredients.length === 0}
+                    disabled={submittingMovement || ingredients.length === 0 || !movementForm.ingredient_id}
                     className="min-h-11 w-full rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                   >
                     {submittingMovement ? "Đang cập nhật..." : "Cập nhật tồn kho"}
@@ -518,111 +496,8 @@ export default function KitchenPage() {
           ) : null}
         </section>
 
-        <section className="space-y-4" aria-label="Hàng chờ bếp">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-bold text-gray-900">Hàng chờ bếp</h2>
-            <p className="text-sm text-gray-500">Tự động làm mới mỗi 15 giây.</p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            {kitchenTabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  aria-pressed={filter === tab.key}
-                  onClick={() => setFilter(tab.key)}
-                  className={`flex min-h-20 items-center justify-between rounded-xl border p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
-                    filter === tab.key
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                      : "border-gray-100 bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
-                      <Icon size={22} weight="duotone" />
-                    </span>
-                    <span className="text-sm font-semibold">{tab.label}</span>
-                  </span>
-                  <span className="text-2xl font-bold">{counts[tab.key]}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {loading ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Đang tải hàng chờ bếp">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-52 animate-pulse rounded-xl bg-gray-100" />
-              ))}
-            </div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-gray-100 bg-white px-6 py-12 text-center shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                <Clock size={24} weight="duotone" />
-              </div>
-              <p className="mt-4 font-semibold text-gray-900">Không có món ở trạng thái này</p>
-              <p className="mt-2 max-w-md text-sm text-gray-500">
-                Khi có món mới từ đơn hàng, bếp sẽ thấy ngay tại đây.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredOrders.map((item) => (
-                <article key={item.id} className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">
-                        {item.table_name || `Bàn ${item.table_id}`}
-                      </p>
-                      <p className="text-xs text-gray-500">Đơn #{item.order_id}</p>
-                    </div>
-                    <span className={`text-xs ${getTimeColor(item.created_at)}`}>
-                      {getTimeDiff(item.created_at)}
-                    </span>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-900">{item.mon_ten}</p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Số lượng: <span className="font-semibold text-gray-800">{item.quantity}</span>
-                        </p>
-                      </div>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS[item.status]?.color}`}>
-                        {STATUS[item.status]?.label}
-                      </span>
-                    </div>
-
-                    {item.note ? (
-                      <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
-                        {item.note}
-                      </p>
-                    ) : null}
-
-                    {STATUS[item.status]?.next ? (
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(item.order_id, item.id, STATUS[item.status].next)}
-                        disabled={updating === item.id}
-                        className="min-h-11 w-full rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
-                      >
-                        {updating === item.id ? "Đang cập nhật..." : STATUS[item.status]?.nextLabel}
-                      </button>
-                    ) : (
-                      <div className="min-h-11 rounded-lg bg-emerald-50 px-4 py-3 text-center text-sm font-semibold text-emerald-700">
-                        Đã hoàn thành
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
       </div>
+
     </Layout>
   );
 }
