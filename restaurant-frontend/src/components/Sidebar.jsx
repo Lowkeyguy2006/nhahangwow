@@ -1,17 +1,30 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { CaretDown, SignOut, UserCircle } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  ChartBar,
+  ChefHat,
+  GearSix,
+  ListChecks,
+  SignOut,
+  SquaresFour,
+  UserCircle,
+  UsersThree,
+  ForkKnife,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 
 const menuItems = [
-  { path: "/admin/dashboard", label: "Tổng quan" },
-  { path: "/admin/menu",  label: "Thực đơn" },
-  { path: "/admin/tables", label: "Sơ đồ bàn" },
-  { path: "/admin/orders", label: "Đơn hàng" },
-  { path: "/admin/kitchen", label: "Nhà bếp" },
-  { path: "/admin/reports", label: "Báo cáo" },
-  { path: "/admin/settings", label: "Cài đặt" },
-  { path: "/admin/staff",  label: "Nhân sự" },
-  { path: "/admin/menu",label: "Thực đơn" },
+  { path: "/admin/dashboard", label: "Tổng quan", icon: SquaresFour },
+  { path: "/admin/menu", label: "Thực đơn", icon: ForkKnife },
+  { path: "/admin/kitchen", label: "Nhà bếp", icon: ChefHat },
+  { path: "/admin/reports", label: "Báo cáo", icon: ChartBar },
+  { path: "/admin/settings", label: "Cài đặt", icon: GearSix },
+  { path: "/admin/staff", label: "Nhân sự", icon: UsersThree },
+];
+
+const upcomingItems = [
+  { label: "Sơ đồ bàn", icon: ListChecks },
+  { label: "Đơn hàng", icon: ListChecks },
 ];
 
 export default function Sidebar() {
@@ -27,7 +40,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-gray-100 bg-white">
       <div className="relative p-3 border-b border-gray-100">
         <button
           type="button"
@@ -72,25 +85,52 @@ export default function Sidebar() {
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 p-3 space-y-1">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? "bg-green-50 text-green-600 font-medium"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`
-            }
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+      <nav className="flex-1 space-y-1 p-3">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={() => setAccountOpen(false)}
+              className={({ isActive }) =>
+                `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors ${
+                  isActive
+                    ? "bg-green-50 font-semibold text-green-600"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`
+              }
+            >
+              <Icon size={20} weight="duotone" />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+
+        <div className="pt-3">
+          <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-gray-300">
+            Sắp có
+          </p>
+          <div className="mt-2 space-y-1">
+            {upcomingItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <div
+                  key={item.label}
+                  className="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm text-gray-300"
+                  aria-disabled="true"
+                >
+                  <Icon size={19} weight="duotone" />
+                  <span>{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
-    </div>
+    </aside>
   );
 }

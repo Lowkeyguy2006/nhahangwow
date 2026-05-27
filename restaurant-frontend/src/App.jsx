@@ -24,6 +24,8 @@ export default function App() {
         <Route path="/admin/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
         <Route path="/admin/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
         <Route path="/admin/setting" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute><Navigate to="/admin/dashboard" /></PrivateRoute>} />
+        <Route path="*" element={<Navigate to="/admin/dashboard" />} />
       </Routes>
     </BrowserRouter>
   );
