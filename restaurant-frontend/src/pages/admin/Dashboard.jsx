@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
+import { ChartBar, CurrencyCircleDollar, ForkKnife, UsersThree } from "@phosphor-icons/react";
 import Layout from "../../components/Layout";
 import API from "../../services/api";
 
-const StatCard = ({ label, value, helper, tone = "emerald" }) => {
+const StatCard = ({ label, value, helper, icon: Icon, tone = "emerald" }) => {
   const toneClass = {
-    emerald: "bg-emerald-50 text-emerald-600",
-    blue: "bg-blue-50 text-blue-600",
-    amber: "bg-amber-50 text-amber-600",
-    slate: "bg-slate-50 text-slate-600",
+    emerald: "bg-emerald-50 text-emerald-700",
+    blue: "bg-blue-50 text-blue-700",
+    amber: "bg-amber-50 text-amber-700",
+    slate: "bg-slate-50 text-slate-700",
   }[tone];
 
   return (
-  <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-sm font-medium text-gray-500">{label}</p>
-        <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
-        <p className="mt-2 text-xs font-medium text-gray-400">{helper}</p>
+    <div className="admin-panel-pad">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold text-slate-500">{label}</p>
+          <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">{value}</p>
+          <p className="mt-3 text-xs font-semibold text-slate-400">{helper}</p>
+        </div>
+        <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${toneClass}`}>
+          <Icon size={23} weight="duotone" />
+        </span>
       </div>
-      <div className={`h-10 w-10 rounded-lg ${toneClass}`} />
     </div>
-  </div>
   );
 };
 
@@ -104,29 +107,27 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Báo cáo Hiệu suất</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Tình hình hoạt động hôm nay
-          </p>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
-          {["Ngày", "Tuần", "Tháng"].map((t) => (
-            <button
-              key={t}
-              className={`min-h-10 shrink-0 rounded-lg px-4 text-sm font-medium transition-colors ${
-                t === "Ngày"
-                  ? "bg-green-500 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="admin-page">
+        <header className="admin-header">
+          <div>
+            <p className="admin-kicker">Tổng quan</p>
+            <h1 className="admin-title">Báo cáo hiệu suất</h1>
+            <p className="admin-subtitle">
+              Tình hình hoạt động hôm nay, doanh thu, bàn đang dùng và đơn đang mở.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {["Ngày", "Tuần", "Tháng"].map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`admin-tab ${item === "Ngày" ? "admin-tab-active" : ""}`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </header>
 
       {error ? (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -135,16 +136,16 @@ export default function Dashboard() {
       ) : null}
 
       {/* Stat Cards */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Doanh thu ngày" value={formatMoney(stats.doanh_thu)} helper="Tổng doanh thu hôm nay" />
-        <StatCard label="Tổng đơn hàng" value={stats.tong_don} helper="Đơn đã ghi nhận" tone="blue" />
-        <StatCard label="Bàn đang dùng" value={orders.length} helper="Đơn đang hoạt động" tone="amber" />
-        <StatCard label="Tổng khách hàng" value={stats.tong_khach || 0} helper="Theo dữ liệu báo cáo" tone="slate" />
+      <div className="grid gap-5 xl:grid-cols-4">
+        <StatCard icon={CurrencyCircleDollar} label="Doanh thu ngày" value={formatMoney(stats.doanh_thu)} helper="Tổng doanh thu hôm nay" />
+        <StatCard icon={ChartBar} label="Tổng đơn hàng" value={stats.tong_don} helper="Đơn đã ghi nhận" tone="blue" />
+        <StatCard icon={ForkKnife} label="Bàn đang dùng" value={orders.length} helper="Đơn đang hoạt động" tone="amber" />
+        <StatCard icon={UsersThree} label="Tổng khách hàng" value={stats.tong_khach || 0} helper="Theo dữ liệu báo cáo" tone="slate" />
       </div>
       {/* Orders Table */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="admin-panel-pad">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-semibold text-gray-800">
+          <h2 className="admin-section-title">
             Trạng thái đơn hàng trực tiếp
           </h2>
           <div className="flex flex-wrap gap-3 text-xs text-gray-500">
@@ -165,7 +166,7 @@ export default function Dashboard() {
           <EmptyOrders />
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+          <table className="admin-table min-w-[720px]">
             <thead>
               <tr className="text-xs text-gray-400 border-b border-gray-100">
                 <th className="text-left pb-3">MÃ ĐƠN</th>
@@ -201,6 +202,7 @@ export default function Dashboard() {
           </table>
           </div>
         )}
+      </div>
       </div>
     </Layout>
   );
