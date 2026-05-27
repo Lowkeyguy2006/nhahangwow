@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Layout from "../../components/Layout";
 import API from "../../services/api";
 
@@ -17,7 +17,7 @@ const STATUS_COLOR = {
 
 export default function MenuPage() {
   const [menu, setMenu] = useState([]);
-  const [filtered, setFiltered] = useState([]);
+  const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
   const [form, setForm] = useState({
@@ -27,6 +27,9 @@ export default function MenuPage() {
     category_id: 1,
     image_url: "",
   });
+  const [recipeRows, setRecipeRows] = useState([
+    { ingredient_id: "", amount: "" },
+  ]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,28 +38,82 @@ export default function MenuPage() {
   const itemsPerPage = 5;
 
   useEffect(() => {
-    fetchMenu();
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        const [menuRes, ingredientsRes] = await Promise.all([
+          API.get("/api/menu"),
+          API.get("/api/inventory"),
+        ]);
+
+        if (isMounted) {
+          setMenu(menuRes.data || []);
+          setIngredients(ingredientsRes.data || []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.response?.data?.message || "Không tải được dữ liệu thực đơn.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const timer = setTimeout(loadData, 0);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
-  useEffect(() => {
+  const filtered = useMemo(() => {
     if (activeCategory === null) {
-      setFiltered(menu);
-    } else {
-      setFiltered(menu.filter((item) => item.category_id === activeCategory));
+      return menu;
     }
-    setPage(1);
+    return menu.filter((item) => item.category_id === activeCategory);
   }, [activeCategory, menu]);
 
   const fetchMenu = async () => {
     try {
       const res = await API.get("/api/menu");
-      setMenu(res.data);
-      setFiltered(res.data);
+      setMenu(res.data || []);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getIngredient = (id) =>
+    ingredients.find((ingredient) => String(ingredient.id) === String(id));
+
+  const resetForm = () => {
+    setForm({ name: "", price: "", description: "", category_id: 1, image_url: "" });
+    setRecipeRows([{ ingredient_id: "", amount: "" }]);
+  };
+
+  const handleRecipeRowChange = (index, field, value) => {
+    setRecipeRows((rows) =>
+      rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row,
+      ),
+    );
+  };
+
+  const addRecipeRow = () => {
+    setRecipeRows((rows) => [...rows, { ingredient_id: "", amount: "" }]);
+  };
+
+  const removeRecipeRow = (index) => {
+    setRecipeRows((rows) =>
+      rows.length === 1
+        ? [{ ingredient_id: "", amount: "" }]
+        : rows.filter((_, rowIndex) => rowIndex !== index),
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -65,9 +122,24 @@ export default function MenuPage() {
     setError("");
     setSuccess("");
     try {
-      await API.post("/api/menu", form);
+      const menuRes = await API.post("/api/menu", form);
+      const menuItemId = menuRes.data.id;
+      const validRecipeRows = recipeRows.filter((row) => row.ingredient_id && Number(row.amount) > 0);
+
+      if (validRecipeRows.length > 0) {
+        await Promise.all(
+          validRecipeRows.map((row) =>
+            API.post("/api/inventory/recipes", {
+              menu_item_id: menuItemId,
+              ingredient_id: Number(row.ingredient_id),
+              amount: Number(row.amount),
+            }),
+          ),
+        );
+      }
+
       setSuccess("Thêm món ăn thành công!");
-      setForm({ name: "", price: "", description: "", category_id: 1, image_url: "" });
+      resetForm();
       setShowForm(false);
       fetchMenu();
     } catch (err) {
@@ -153,7 +225,10 @@ export default function MenuPage() {
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
+                    onClick={() => {
+                      setActiveCategory(cat.id);
+                      setPage(1);
+                    }}
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       activeCategory === cat.id
                         ? "bg-green-500 text-white"
@@ -320,7 +395,7 @@ export default function MenuPage() {
       {/* Modal Thêm món */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-800">Thêm món ăn mới</h2>
               <button
@@ -404,6 +479,80 @@ export default function MenuPage() {
                   onChange={(e) => setForm({ ...form, image_url: e.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800">Nguyên liệu công thức</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addRecipeRow}
+                    className="shrink-0 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-600 transition-colors hover:bg-green-100"
+                  >
+                    + Thêm nguyên liệu
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {recipeRows.map((row, index) => {
+                    const selectedIngredient = getIngredient(row.ingredient_id);
+
+                    return (
+                      <div key={index} className="grid gap-2 sm:grid-cols-[1fr_150px_44px]">
+                        <label className="block text-xs font-medium text-gray-600">
+                          Nguyên liệu
+                          <select
+                            value={row.ingredient_id}
+                            onChange={(e) => handleRecipeRowChange(index, "ingredient_id", e.target.value)}
+                            className="mt-1 min-h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          >
+                            <option value="">Chọn nguyên liệu</option>
+                            {ingredients.map((ingredient) => (
+                              <option key={ingredient.id} value={ingredient.id}>
+                                {ingredient.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="block text-xs font-medium text-gray-600">
+                          Định lượng
+                          <div className="mt-1 flex min-h-10 overflow-hidden rounded-lg border border-gray-200 bg-white focus-within:ring-2 focus-within:ring-green-500">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={row.amount}
+                              onChange={(e) => handleRecipeRowChange(index, "amount", e.target.value)}
+                              className="min-w-0 flex-1 px-3 text-sm text-gray-800 outline-none"
+                              placeholder="0"
+                            />
+                            <span className="flex items-center border-l border-gray-200 bg-gray-50 px-2 text-xs font-semibold text-gray-500">
+                              {selectedIngredient?.unit || "đv"}
+                            </span>
+                          </div>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => removeRecipeRow(index)}
+                          className="mt-5 flex h-10 w-10 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                          aria-label="Xóa dòng nguyên liệu"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {ingredients.length === 0 && (
+                  <p className="mt-3 rounded-lg bg-yellow-50 px-3 py-2 text-xs text-yellow-700">
+                    Chưa có nguyên liệu trong kho. Hãy thêm nguyên liệu ở trang Nhà bếp trước.
+                  </p>
+                )}
               </div>
 
               {/* Buttons */}
