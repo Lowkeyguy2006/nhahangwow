@@ -16,7 +16,7 @@ const StatCard = ({ label, value, helper, icon: Icon, tone = "emerald" }) => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-bold text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">{value}</p>
+          <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">{value}</p>
           <p className="mt-3 text-xs font-semibold text-slate-400">{helper}</p>
         </div>
         <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${toneClass}`}>
@@ -136,7 +136,7 @@ export default function Dashboard() {
       ) : null}
 
       {/* Stat Cards */}
-      <div className="grid gap-5 xl:grid-cols-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         <StatCard icon={CurrencyCircleDollar} label="Doanh thu ngày" value={formatMoney(stats.doanh_thu)} helper="Tổng doanh thu hôm nay" />
         <StatCard icon={ChartBar} label="Tổng đơn hàng" value={stats.tong_don} helper="Đơn đã ghi nhận" tone="blue" />
         <StatCard icon={ForkKnife} label="Bàn đang dùng" value={orders.length} helper="Đơn đang hoạt động" tone="amber" />

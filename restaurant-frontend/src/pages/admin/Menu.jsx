@@ -240,11 +240,11 @@ export default function MenuPage() {
         </div>
       )}
 
-      <div className="flex gap-6">
+      <div className="flex gap-4">
         {/* Main Content */}
         <div className="flex-1">
           {/* Category Filter + Stats */}
-          <div className="flex gap-4 mb-4">
+          <div className="mb-4 flex gap-4">
             {/* Filter */}
             <div className="admin-panel-pad flex-1">
               <div className="flex items-center justify-between mb-3">
@@ -274,9 +274,9 @@ export default function MenuPage() {
             </div>
 
             {/* Tổng món */}
-            <div className="w-56 rounded-2xl bg-emerald-700 p-5 text-white shadow-[0_18px_40px_rgba(4,120,87,0.18)]">
-              <p className="text-sm font-bold opacity-80">Tổng món đang bán</p>
-              <p className="text-4xl font-bold mt-1">{menu.filter(m => m.is_visible).length}</p>
+            <div className="w-48 rounded-2xl bg-emerald-700 p-4 text-white shadow-[0_18px_40px_rgba(4,120,87,0.18)]">
+              <p className="text-xs font-black uppercase tracking-wide opacity-75">Đang bán</p>
+              <p className="mt-1 text-3xl font-black">{menu.filter(m => m.is_visible).length}</p>
             </div>
           </div>
 

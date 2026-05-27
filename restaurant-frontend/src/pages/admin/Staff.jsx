@@ -101,9 +101,9 @@ export default function Staff() {
               Tạo tài khoản, kiểm soát vai trò và xem nhanh phạm vi quyền của từng nhóm nhân viên.
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Tổng nhân sự</p>
-            <p className="mt-1 text-3xl font-black text-slate-950">{accounts.length}</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{accounts.length}</p>
           </div>
         </header>
 
@@ -119,7 +119,7 @@ export default function Staff() {
           </div>
         )}
 
-        <section className="grid gap-5 xl:grid-cols-3">
+        <section className="grid gap-4 xl:grid-cols-3">
           {roleCounts.map((role) => (
             <article key={role.id} className="admin-panel-pad admin-lift">
               <div className="flex items-start justify-between">
@@ -135,7 +135,7 @@ export default function Staff() {
           ))}
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[1fr_380px]">
+        <section className="grid gap-4 xl:grid-cols-[1fr_360px]">
           <div className="admin-panel overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <div>
@@ -146,7 +146,7 @@ export default function Staff() {
             </div>
 
             {loading ? (
-              <div className="space-y-3 p-5">
+              <div className="space-y-2 p-4">
                 {[1, 2, 3, 4].map((item) => (
                   <div key={item} className="h-14 animate-pulse rounded-xl bg-slate-100" />
                 ))}

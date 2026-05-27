@@ -111,24 +111,23 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="admin-page">
+        <header className="admin-header">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              Cấu hình hệ thống
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-gray-500">
+            <p className="admin-kicker">Cài đặt</p>
+            <h1 className="admin-title">Cấu hình hệ thống</h1>
+            <p className="admin-subtitle">
               Quản lý thuế, phương thức thanh toán và mẫu hóa đơn của nhà hàng.
             </p>
           </div>
-          <div className="rounded-full border border-gray-100 bg-white px-4 py-2 text-xs font-semibold text-gray-500 shadow-sm">
+          <div className="admin-command-strip">
             Mẫu hóa đơn cập nhật trực tiếp
           </div>
-        </div>
+        </header>
 
-        <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-6 flex items-center gap-3">
+        <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
+          <section className="admin-panel-pad">
+            <div className="mb-4 flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                 <Percent size={23} weight="bold" />
               </span>
@@ -180,8 +179,8 @@ export default function SettingsPage() {
             </button>
           </section>
 
-          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <section className="admin-panel-pad">
+            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                   <Bank size={23} weight="duotone" />
@@ -273,12 +272,12 @@ export default function SettingsPage() {
           </section>
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[460px_1fr]">
-          <section className="rounded-2xl bg-slate-50 p-5 sm:p-7">
-            <p className="mb-6 text-center text-xs font-bold uppercase tracking-[0.18em] text-slate-300">
+        <div className="grid gap-4 xl:grid-cols-[390px_1fr]">
+          <section className="rounded-[18px] border border-slate-200/80 bg-slate-50 p-4">
+            <p className="mb-4 text-center text-[11px] font-black uppercase tracking-[0.18em] text-slate-300">
               Xem trước hóa đơn
             </p>
-            <div className="mx-auto max-w-[320px] bg-white px-6 py-7 shadow-[0_28px_60px_rgba(15,23,42,0.16)] sm:px-8">
+            <div className="mx-auto max-w-[280px] bg-white px-6 py-6 shadow-[0_22px_50px_rgba(15,23,42,0.14)]">
               <div className="mb-5 flex flex-col items-center text-center">
                 <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-sm bg-stone-100 text-stone-600">
                   <Receipt size={22} weight="duotone" />
@@ -323,8 +322,8 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-7">
-            <div className="mb-6 flex items-center gap-3">
+          <section className="admin-panel-pad">
+            <div className="mb-4 flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-500">
                 <Receipt size={23} weight="duotone" />
               </span>
@@ -338,7 +337,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-xs font-bold text-gray-700">
                   Logo nhà hàng

@@ -36,7 +36,7 @@ function MetricCard({ label, value, helper, icon: Icon, tone = "emerald" }) {
       <div className="flex items-start justify-between gap-5">
         <div>
           <p className="text-sm font-bold text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+          <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">
             {value}
           </p>
           <p className="mt-3 text-xs font-semibold text-slate-400">{helper}</p>
@@ -51,7 +51,7 @@ function MetricCard({ label, value, helper, icon: Icon, tone = "emerald" }) {
 
 function LoadingState() {
   return (
-    <div className="grid gap-5 xl:grid-cols-3">
+    <div className="grid gap-4 xl:grid-cols-3">
       {[1, 2, 3, 4, 5, 6].map((item) => (
         <div key={item} className="h-40 animate-pulse rounded-2xl bg-white" />
       ))}
@@ -145,7 +145,7 @@ export default function ReportsPage() {
           <LoadingState />
         ) : (
           <>
-            <section className="grid gap-5 xl:grid-cols-3">
+            <section className="grid gap-4 xl:grid-cols-3">
               <MetricCard
                 icon={CurrencyCircleDollar}
                 label="Tổng doanh thu"
@@ -168,7 +168,7 @@ export default function ReportsPage() {
               />
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+            <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
               <div className="admin-panel-pad">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
@@ -179,9 +179,9 @@ export default function ReportsPage() {
                 </div>
 
                 {tab === "day" ? (
-                  <div className="flex min-h-64 items-center justify-center rounded-2xl bg-slate-50">
+                  <div className="flex min-h-52 items-center justify-center rounded-2xl bg-slate-50">
                     <div className="text-center">
-                      <p className="text-5xl font-black tracking-tight text-slate-950">
+                      <p className="text-4xl font-black tracking-tight text-slate-950">
                         {formatMoney(revenue?.tong_doanh_thu)}
                       </p>
                       <p className="mt-3 text-sm font-semibold text-slate-500">
@@ -263,7 +263,7 @@ export default function ReportsPage() {
               </div>
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-2">
+            <section className="grid gap-4 xl:grid-cols-2">
               <div className="admin-panel-pad">
                 <h2 className="admin-section-title">Phương thức thanh toán</h2>
                 <div className="mt-5 space-y-3">
