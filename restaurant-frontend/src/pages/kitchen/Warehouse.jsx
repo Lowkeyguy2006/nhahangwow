@@ -64,7 +64,7 @@ function StatCard({ label, value, icon: Icon, tone = "emerald" }) {
   );
 }
 
-export default function KitchenPage() {
+export default function WarehousePage() {
   const [ingredients, setIngredients] = useState([]);
   const [logs, setLogs] = useState([]);
   const [inventoryLoading, setInventoryLoading] = useState(true);

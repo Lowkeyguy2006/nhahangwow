@@ -16,10 +16,13 @@ import { useState } from "react";
 const menuItems = [
   { path: "/admin/dashboard", label: "Tổng quan", icon: SquaresFour },
   { path: "/admin/menu", label: "Thực đơn", icon: ForkKnife },
-  { path: "/admin/kitchen", label: "Nhà bếp", icon: ChefHat },
   { path: "/admin/reports", label: "Báo cáo", icon: ChartBar },
   { path: "/admin/settings", label: "Cài đặt", icon: GearSix },
   { path: "/admin/staff", label: "Nhân sự", icon: UsersThree },
+];
+
+const kitchenItems = [
+  { path: "/kitchen/warehouse", label: "Kho hàng", icon: ChefHat },
 ];
 
 const upcomingItems = [
@@ -32,6 +35,8 @@ export default function Sidebar() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [accountOpen, setAccountOpen] = useState(false);
   const displayName = user.full_name || "Admin";
+  const isKitchen = Number(user.role_id) === 3;
+  const visibleItems = isKitchen ? kitchenItems : menuItems;
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -58,7 +63,9 @@ export default function Sidebar() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-black text-slate-900">{displayName}</p>
-            <p className="text-xs font-semibold text-slate-400">Quản trị nhà hàng</p>
+            <p className="text-xs font-semibold text-slate-400">
+              {isKitchen ? "Bộ phận bếp" : "Quản trị nhà hàng"}
+            </p>
           </div>
           <CaretDown
             size={16}
@@ -86,7 +93,7 @@ export default function Sidebar() {
 
       {/* Menu */}
       <nav className="flex-1 space-y-1 p-3">
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
 
           return (
@@ -108,27 +115,29 @@ export default function Sidebar() {
           );
         })}
 
-        <div className="pt-3">
-          <p className="px-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-300">
-            Sắp có
-          </p>
-          <div className="mt-2 space-y-1">
-            {upcomingItems.map((item) => {
-              const Icon = item.icon;
+        {!isKitchen ? (
+          <div className="pt-3">
+            <p className="px-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-300">
+              Sắp có
+            </p>
+            <div className="mt-2 space-y-1">
+              {upcomingItems.map((item) => {
+                const Icon = item.icon;
 
-              return (
-                <div
-                  key={item.label}
-                  className="flex min-h-9 items-center gap-2.5 rounded-xl px-3 text-[13px] font-bold text-slate-300"
-                  aria-disabled="true"
-                >
-                  <Icon size={19} weight="duotone" />
-                  <span>{item.label}</span>
-                </div>
-              );
-            })}
+                return (
+                  <div
+                    key={item.label}
+                    className="flex min-h-9 items-center gap-2.5 rounded-xl px-3 text-[13px] font-bold text-slate-300"
+                    aria-disabled="true"
+                  >
+                    <Icon size={19} weight="duotone" />
+                    <span>{item.label}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : null}
       </nav>
 
     </aside>
