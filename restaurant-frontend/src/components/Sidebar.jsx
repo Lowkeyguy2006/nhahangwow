@@ -12,10 +12,13 @@ import {
   ForkKnife,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import useAuth from "../hooks/useAuth";
+import { ROLES } from "../utils/permissions";
 
 const menuItems = [
   { path: "/admin/dashboard", label: "Tổng quan", icon: SquaresFour },
   { path: "/admin/menu", label: "Thực đơn", icon: ForkKnife },
+  { path: "/admin/warehouse", label: "Kho hàng", icon: ChefHat },
   { path: "/admin/reports", label: "Báo cáo", icon: ChartBar },
   { path: "/admin/settings", label: "Cài đặt", icon: GearSix },
   { path: "/admin/staff", label: "Nhân sự", icon: UsersThree },
@@ -32,11 +35,10 @@ const upcomingItems = [
 
 export default function Sidebar() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const { user, roleId, isKitchen } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
   const displayName = user.full_name || "Admin";
-  const isKitchen = Number(user.role_id) === 3;
-  const visibleItems = isKitchen ? kitchenItems : menuItems;
+  const visibleItems = roleId === ROLES.KITCHEN ? kitchenItems : menuItems;
 
   const handleLogout = () => {
     localStorage.removeItem("token");

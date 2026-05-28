@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeSlash, LockKey, User, BowlFood } from "@phosphor-icons/react";
 import API from "../services/api";
 import loginWallpaper from "../assets/dineflow-login-wallpaper.png";
+import { getDefaultPath } from "../utils/permissions";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,11 +21,7 @@ export default function Login() {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // Phân quyền điều hướng
-      const role_id = res.data.user.role_id;
-      if (role_id === 1) navigate("/admin/dashboard");
-      else if (role_id === 2) navigate("/staff/order");
-      else if (role_id === 3) navigate("/kitchen/warehouse");
+      navigate(getDefaultPath(res.data.user));
     } catch {
       setError("Sai tên đăng nhập hoặc mật khẩu!");
     } finally {
