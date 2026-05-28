@@ -71,13 +71,13 @@ function StatCard({ label, value, icon: Icon, tone = "emerald" }) {
 
   return (
     <article className="admin-panel-pad admin-lift">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-black text-slate-950">{value}</p>
+          <p className="text-xs font-bold text-slate-500">{label}</p>
+          <p className="mt-0.5 text-xl font-black text-slate-950">{value}</p>
         </div>
-        <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneClass}`}>
-          <Icon size={22} weight="duotone" />
+        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${toneClass}`}>
+          <Icon size={20} weight="duotone" />
         </span>
       </div>
     </article>
@@ -279,17 +279,17 @@ export default function Warehouse({ permissions }) {
           </div>
         ) : null}
 
-        <section className="space-y-4" aria-label="Quản lý kho nguyên liệu">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="space-y-3" aria-label="Quản lý kho nguyên liệu">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard icon={Package} label="Tổng nguyên liệu" value={inventoryStats.total} />
             <StatCard icon={CheckCircle} label="Tồn kho ổn định" value={inventoryStats.healthy} tone="blue" />
             <StatCard icon={WarningCircle} label="Sắp hết" value={inventoryStats.lowStock} tone="amber" />
             <StatCard icon={WarningCircle} label="Hết hàng" value={inventoryStats.outStock} tone="red" />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-            <div className="admin-panel overflow-hidden">
-              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="admin-panel flex min-h-[420px] flex-col overflow-hidden">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
                 <h3 className="font-semibold text-gray-900">Tồn kho hiện tại</h3>
                 <span className="text-xs font-medium text-gray-500">{ingredients.length} nguyên liệu</span>
               </div>
@@ -312,27 +312,27 @@ export default function Warehouse({ permissions }) {
                 </div>
               ) : (
                 <>
-                  <div className="hidden overflow-x-auto md:block">
+                  <div className="hidden max-h-[calc(100vh-230px)] overflow-auto md:block">
                     <table className="w-full min-w-[720px]">
                       <thead>
-                        <tr className="border-b border-gray-100 text-xs font-semibold uppercase text-gray-500">
-                          <th className="px-4 py-3 text-left">Nguyên liệu</th>
-                          <th className="px-4 py-3 text-left">Tồn kho</th>
-                          <th className="px-4 py-3 text-left">Mức tối thiểu</th>
-                          <th className="px-4 py-3 text-left">Trạng thái</th>
+                        <tr className="sticky top-0 z-10 border-b border-gray-100 bg-white text-xs font-semibold uppercase text-gray-500">
+                          <th className="px-4 py-2.5 text-left">Nguyên liệu</th>
+                          <th className="px-4 py-2.5 text-left">Tồn kho</th>
+                          <th className="px-4 py-2.5 text-left">Mức tối thiểu</th>
+                          <th className="px-4 py-2.5 text-left">Trạng thái</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {ingredients.map((ingredient) => (
                           <tr key={ingredient.id} className="text-sm transition-colors hover:bg-gray-50">
-                            <td className="px-4 py-3 font-semibold text-gray-900">{ingredient.name}</td>
-                            <td className="px-4 py-3 text-gray-700">
+                            <td className="px-4 py-2.5 font-semibold text-gray-900">{ingredient.name}</td>
+                            <td className="px-4 py-2.5 text-gray-700">
                               {formatNumber(ingredient.quantity)} {ingredient.unit}
                             </td>
-                            <td className="px-4 py-3 text-gray-500">
+                            <td className="px-4 py-2.5 text-gray-500">
                               {formatNumber(ingredient.min_quantity)} {ingredient.unit}
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-2.5">
                               <StockBadge ingredient={ingredient} />
                             </td>
                           </tr>
@@ -360,11 +360,11 @@ export default function Warehouse({ permissions }) {
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {permissions.canMoveStock ? (
                 <form onSubmit={handleInventoryMovement} className="admin-panel-pad">
                   <h3 className="font-semibold text-gray-900">Nhập xuất kho</h3>
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-2.5">
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { key: "nhap", label: "Nhập", icon: ArrowDown },
@@ -377,7 +377,7 @@ export default function Warehouse({ permissions }) {
                             type="button"
                             aria-pressed={movementForm.type === option.key}
                             onClick={() => setMovementForm({ ...movementForm, type: option.key })}
-                            className={`flex min-h-11 items-center justify-center gap-2 rounded-lg border text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                            className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                               movementForm.type === option.key
                                 ? "border-emerald-600 bg-emerald-50 text-emerald-700"
                                 : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -415,7 +415,7 @@ export default function Warehouse({ permissions }) {
                           if (event.key === "Escape") setIngredientDropdownOpen(false);
                         }}
                         placeholder="Tìm nguyên liệu..."
-                        className="min-h-11 w-full rounded-lg border border-gray-200 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                        className="min-h-10 w-full rounded-lg border border-gray-200 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                         required
                       />
 
@@ -460,7 +460,7 @@ export default function Warehouse({ permissions }) {
 
                   <label className="block text-sm font-semibold text-gray-700">
                     Số lượng
-                    <div className="mt-1 flex min-h-11 overflow-hidden rounded-lg border border-gray-200 focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-100">
+                    <div className="mt-1 flex min-h-10 overflow-hidden rounded-lg border border-gray-200 focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-100">
                       <input
                         type="number"
                         min="0"
@@ -483,14 +483,14 @@ export default function Warehouse({ permissions }) {
                       value={movementForm.note}
                       onChange={(event) => setMovementForm({ ...movementForm, note: event.target.value })}
                       placeholder="Ví dụ: nhập đầu ca, hủy do hỏng"
-                      className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                      className="mt-1 min-h-10 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                     />
                   </label>
 
                     <button
                       type="submit"
                       disabled={submittingMovement || ingredients.length === 0 || !movementForm.ingredient_id}
-                      className="min-h-11 w-full rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      className="min-h-10 w-full rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                     >
                       {submittingMovement ? "Đang cập nhật..." : "Cập nhật tồn kho"}
                     </button>
@@ -500,14 +500,14 @@ export default function Warehouse({ permissions }) {
 
               {permissions.canCreateIngredient ? (
                 <form onSubmit={handleCreateIngredient} className="admin-panel-pad border-emerald-100 bg-white">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                      <Plus size={20} weight="bold" />
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                      <Plus size={18} weight="bold" />
                     </span>
-                    <h3 className="pt-2 font-black text-gray-950">Thêm nguyên liệu nhanh</h3>
+                    <h3 className="font-black text-gray-950">Thêm nguyên liệu nhanh</h3>
                   </div>
 
-                  <div className="mt-5 space-y-4">
+                  <div className="mt-3 space-y-2.5">
                     <label className="block text-sm font-semibold text-gray-700">
                       Tên nguyên liệu
                       <input
@@ -515,7 +515,7 @@ export default function Warehouse({ permissions }) {
                         value={ingredientForm.name}
                         onChange={(event) => setIngredientForm({ ...ingredientForm, name: event.target.value })}
                         placeholder="Ví dụ: Thịt bò, hành lá"
-                        className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                        className="mt-1 min-h-10 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                         required
                       />
                     </label>
@@ -538,7 +538,7 @@ export default function Warehouse({ permissions }) {
                             if (event.key === "Escape") setUnitDropdownOpen(false);
                           }}
                           placeholder="Tìm hoặc nhập đơn vị..."
-                          className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 pr-10 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                          className="min-h-10 w-full rounded-lg border border-gray-200 bg-white px-3 pr-10 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                           required
                         />
                         <CaretDown
@@ -563,7 +563,7 @@ export default function Warehouse({ permissions }) {
                                       setIngredientForm({ ...ingredientForm, unit });
                                       setUnitDropdownOpen(false);
                                     }}
-                                    className={`flex min-h-10 w-full items-center justify-between rounded-lg px-3 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                                  className={`flex min-h-9 w-full items-center justify-between rounded-lg px-3 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                                       ingredientForm.unit === unit
                                         ? "bg-emerald-50 text-emerald-700"
                                         : "text-gray-700 hover:bg-gray-50"
@@ -590,7 +590,7 @@ export default function Warehouse({ permissions }) {
                         !ingredientForm.name.trim() ||
                         !ingredientForm.unit.trim()
                       }
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,0.18)] transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(5,150,105,0.16)] transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                     >
                       <Plus size={18} weight="bold" />
                       {submittingIngredient ? "Đang thêm..." : "Thêm nguyên liệu"}
