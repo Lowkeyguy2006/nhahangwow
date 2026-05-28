@@ -23,6 +23,10 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
   const [recipePreviewItem, setRecipePreviewItem] = useState(null);
+  const [editingRecipe, setEditingRecipe] = useState(false);
+  const [editRecipeRows, setEditRecipeRows] = useState([
+    { ingredient_id: "", amount: "" },
+  ]);
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -104,10 +108,20 @@ export default function MenuPage() {
     recipes.filter((recipe) => String(recipe.menu_item_id) === String(menuItemId));
 
   const showRecipePreview = (item) => {
+    const itemRecipes = getMenuItemRecipes(item.id);
     setRecipePreviewItem({
       ...item,
-      recipes: getMenuItemRecipes(item.id),
+      recipes: itemRecipes,
     });
+    setEditRecipeRows(
+      itemRecipes.length > 0
+        ? itemRecipes.map((recipe) => ({
+          ingredient_id: String(recipe.ingredient_id),
+          amount: String(recipe.amount),
+        }))
+        : [{ ingredient_id: "", amount: "" }],
+    );
+    setEditingRecipe(false);
   };
 
   const handleRecipePreviewKeyDown = (event, item) => {
@@ -130,8 +144,20 @@ export default function MenuPage() {
     );
   };
 
+  const handleEditRecipeRowChange = (index, field, value) => {
+    setEditRecipeRows((rows) =>
+      rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row,
+      ),
+    );
+  };
+
   const addRecipeRow = () => {
     setRecipeRows((rows) => [...rows, { ingredient_id: "", amount: "" }]);
+  };
+
+  const addEditRecipeRow = () => {
+    setEditRecipeRows((rows) => [...rows, { ingredient_id: "", amount: "" }]);
   };
 
   const removeRecipeRow = (index) => {
@@ -140,6 +166,59 @@ export default function MenuPage() {
         ? [{ ingredient_id: "", amount: "" }]
         : rows.filter((_, rowIndex) => rowIndex !== index),
     );
+  };
+
+  const removeEditRecipeRow = (index) => {
+    setEditRecipeRows((rows) =>
+      rows.length === 1
+        ? [{ ingredient_id: "", amount: "" }]
+        : rows.filter((_, rowIndex) => rowIndex !== index),
+    );
+  };
+
+  const handleUpdateRecipe = async () => {
+    if (!recipePreviewItem) return;
+
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const validRecipeRows = editRecipeRows.filter((row) => row.ingredient_id && Number(row.amount) > 0);
+
+      await API.put(`/api/inventory/recipes/${recipePreviewItem.id}`, {
+        recipes: validRecipeRows.map((row) => ({
+          ingredient_id: Number(row.ingredient_id),
+          amount: Number(row.amount),
+        })),
+      });
+
+      setSuccess("Đã cập nhật nguyên liệu món ăn.");
+      await fetchMenu();
+      setEditingRecipe(false);
+      setRecipePreviewItem((current) => (
+        current
+          ? {
+            ...current,
+            recipes: validRecipeRows.map((row, index) => {
+              const ingredient = getIngredient(row.ingredient_id);
+              return {
+                id: `updated-${index}`,
+                menu_item_id: current.id,
+                ingredient_id: Number(row.ingredient_id),
+                amount: Number(row.amount),
+                ingredient_name: ingredient?.name || "Nguyên liệu",
+                unit: ingredient?.unit || "",
+              };
+            }),
+          }
+          : current
+      ));
+    } catch (err) {
+      setError(err.response?.data?.message || "Không cập nhật được nguyên liệu món ăn.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -468,11 +547,23 @@ export default function MenuPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-green-200 bg-white px-3 py-1.5 text-xs font-semibold text-green-600 shadow-sm">
-                    {recipePreviewItem.recipes.length} nguyên liệu
+                    {editingRecipe ? editRecipeRows.filter((row) => row.ingredient_id).length : recipePreviewItem.recipes.length} nguyên liệu
                   </span>
+                  {!editingRecipe ? (
+                    <button
+                      type="button"
+                      onClick={() => setEditingRecipe(true)}
+                      className="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 transition-colors hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    >
+                      Sửa nguyên liệu
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => setRecipePreviewItem(null)}
+                    onClick={() => {
+                      setRecipePreviewItem(null);
+                      setEditingRecipe(false);
+                    }}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400"
                     aria-label="Đóng công thức"
                   >
@@ -483,7 +574,103 @@ export default function MenuPage() {
             </div>
 
             <div className="max-h-[calc(min(76vh,620px)-96px)] overflow-y-auto p-5">
-              {recipePreviewItem.recipes.length === 0 ? (
+              {editingRecipe ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-gray-800">Nguyên liệu công thức</h3>
+                      <button
+                        type="button"
+                        onClick={addEditRecipeRow}
+                        className="shrink-0 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-600 transition-colors hover:bg-green-100"
+                      >
+                        + Thêm nguyên liệu
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {editRecipeRows.map((row, index) => {
+                        const selectedIngredient = getIngredient(row.ingredient_id);
+
+                        return (
+                          <div key={index} className="grid gap-2 sm:grid-cols-[1fr_150px_44px]">
+                            <label className="block text-xs font-medium text-gray-600">
+                              Nguyên liệu
+                              <select
+                                value={row.ingredient_id}
+                                onChange={(event) => handleEditRecipeRowChange(index, "ingredient_id", event.target.value)}
+                                className="mt-1 min-h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                              >
+                                <option value="">Chọn nguyên liệu</option>
+                                {ingredients.map((ingredient) => (
+                                  <option key={ingredient.id} value={ingredient.id}>
+                                    {ingredient.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className="block text-xs font-medium text-gray-600">
+                              Định lượng
+                              <div className="mt-1 flex min-h-10 overflow-hidden rounded-lg border border-gray-200 bg-white focus-within:ring-2 focus-within:ring-green-500">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={row.amount}
+                                  onChange={(event) => handleEditRecipeRowChange(index, "amount", event.target.value)}
+                                  className="min-w-0 flex-1 px-3 text-sm text-gray-800 outline-none"
+                                  placeholder="0"
+                                />
+                                <span className="flex items-center border-l border-gray-200 bg-gray-50 px-2 text-xs font-semibold text-gray-500">
+                                  {selectedIngredient?.unit || "đv"}
+                                </span>
+                              </div>
+                            </label>
+
+                            <button
+                              type="button"
+                              onClick={() => removeEditRecipeRow(index)}
+                              className="mt-5 flex h-10 w-10 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                              aria-label="Xóa dòng nguyên liệu"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingRecipe(false);
+                        setEditRecipeRows(
+                          recipePreviewItem.recipes.length > 0
+                            ? recipePreviewItem.recipes.map((recipe) => ({
+                              ingredient_id: String(recipe.ingredient_id),
+                              amount: String(recipe.amount),
+                            }))
+                            : [{ ingredient_id: "", amount: "" }],
+                        );
+                      }}
+                      className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUpdateRecipe}
+                      disabled={submitting}
+                      className="flex-1 rounded-lg bg-green-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+                    >
+                      {submitting ? "Đang lưu..." : "Lưu nguyên liệu"}
+                    </button>
+                  </div>
+                </div>
+              ) : recipePreviewItem.recipes.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center">
                   <p className="text-sm font-semibold text-gray-700">
                     Chưa có nguyên liệu

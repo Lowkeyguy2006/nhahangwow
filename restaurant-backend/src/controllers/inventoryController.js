@@ -218,3 +218,39 @@ exports.createRecipe = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
+// CẬP NHẬT CÔNG THỨC MÓN ĂN
+exports.updateMenuItemRecipes = async (req, res) => {
+  const { recipes = [] } = req.body;
+  const { menuItemId } = req.params;
+  const connection = await db.getConnection();
+
+  try {
+    const validRecipes = recipes.filter(
+      (recipe) => recipe.ingredient_id && Number(recipe.amount) > 0
+    );
+
+    await connection.beginTransaction();
+    await connection.query('DELETE FROM recipes WHERE menu_item_id=?', [menuItemId]);
+
+    if (validRecipes.length > 0) {
+      await Promise.all(
+        validRecipes.map((recipe) =>
+          connection.query(
+            `INSERT INTO recipes (menu_item_id, ingredient_id, amount)
+             VALUES (?, ?, ?)`,
+            [menuItemId, Number(recipe.ingredient_id), Number(recipe.amount)]
+          )
+        )
+      );
+    }
+
+    await connection.commit();
+    res.json({ message: 'Cập nhật công thức thành công!' });
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  } finally {
+    connection.release();
+  }
+};
