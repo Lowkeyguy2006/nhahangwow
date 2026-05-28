@@ -4,6 +4,7 @@ import {
   ArrowUp,
   CheckCircle,
   ClockCounterClockwise,
+  CaretDown,
   MagnifyingGlass,
   Package,
   Plus,
@@ -91,6 +92,7 @@ export default function Warehouse({ permissions }) {
   const [movementForm, setMovementForm] = useState(emptyMovementForm);
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [ingredientDropdownOpen, setIngredientDropdownOpen] = useState(false);
+  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
   const [submittingIngredient, setSubmittingIngredient] = useState(false);
   const [submittingMovement, setSubmittingMovement] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -163,6 +165,21 @@ export default function Warehouse({ permissions }) {
     );
   }, [ingredients, ingredientSearch]);
 
+  const unitOptions = useMemo(() => {
+    const units = ingredients
+      .map((ingredient) => ingredient.unit?.trim())
+      .filter(Boolean);
+
+    return [...new Set(units)].sort((a, b) => a.localeCompare(b, "vi"));
+  }, [ingredients]);
+
+  const searchedUnits = useMemo(() => {
+    const query = ingredientForm.unit.trim().toLowerCase();
+    if (!query) return unitOptions;
+
+    return unitOptions.filter((unit) => unit.toLowerCase().includes(query));
+  }, [ingredientForm.unit, unitOptions]);
+
   const logStats = useMemo(() => ({
     imports: logs.filter((log) => log.type === "nhap").length,
     exports: logs.filter((log) => log.type === "xuat").length,
@@ -186,6 +203,8 @@ export default function Warehouse({ permissions }) {
     try {
       await API.post("/api/inventory", {
         ...ingredientForm,
+        name: ingredientForm.name.trim(),
+        unit: ingredientForm.unit.trim(),
         quantity: 0,
         min_quantity: 0,
       });
@@ -480,36 +499,98 @@ export default function Warehouse({ permissions }) {
               ) : null}
 
               {permissions.canCreateIngredient ? (
-                <form onSubmit={handleCreateIngredient} className="admin-panel-pad">
-                  <h3 className="font-semibold text-gray-900">Thêm nguyên liệu nhanh</h3>
-                  <div className="mt-4 space-y-3">
+                <form onSubmit={handleCreateIngredient} className="admin-panel-pad border-emerald-100 bg-white">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                      <Plus size={20} weight="bold" />
+                    </span>
+                    <h3 className="pt-2 font-black text-gray-950">Thêm nguyên liệu nhanh</h3>
+                  </div>
+
+                  <div className="mt-5 space-y-4">
                     <label className="block text-sm font-semibold text-gray-700">
                       Tên nguyên liệu
                       <input
                         type="text"
                         value={ingredientForm.name}
                         onChange={(event) => setIngredientForm({ ...ingredientForm, name: event.target.value })}
+                        placeholder="Ví dụ: Thịt bò, hành lá"
                         className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                         required
                       />
                     </label>
 
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Đơn vị
-                    <input
-                      type="text"
-                      value={ingredientForm.unit}
-                      onChange={(event) => setIngredientForm({ ...ingredientForm, unit: event.target.value })}
-                      placeholder="kg, lít, chai, gói"
-                      className="mt-1 min-h-11 w-full rounded-lg border border-gray-200 px-3 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                      required
-                    />
-                  </label>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">Đơn vị</p>
+                      <div className="relative mt-1">
+                        <input
+                          type="search"
+                          value={ingredientForm.unit}
+                          onFocus={() => setUnitDropdownOpen(true)}
+                          onBlur={() => {
+                            setTimeout(() => setUnitDropdownOpen(false), 120);
+                          }}
+                          onChange={(event) => {
+                            setIngredientForm({ ...ingredientForm, unit: event.target.value });
+                            setUnitDropdownOpen(true);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setUnitDropdownOpen(false);
+                          }}
+                          placeholder="Tìm hoặc nhập đơn vị..."
+                          className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 pr-10 text-sm font-normal outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                          required
+                        />
+                        <CaretDown
+                          size={16}
+                          className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${
+                            unitDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+
+                        {unitDropdownOpen ? (
+                          <div
+                            className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-gray-100 bg-white p-2 shadow-xl"
+                            onMouseDown={(event) => event.preventDefault()}
+                          >
+                            {searchedUnits.length > 0 ? (
+                              <>
+                                {searchedUnits.map((unit) => (
+                                  <button
+                                    key={unit}
+                                    type="button"
+                                    onClick={() => {
+                                      setIngredientForm({ ...ingredientForm, unit });
+                                      setUnitDropdownOpen(false);
+                                    }}
+                                    className={`flex min-h-10 w-full items-center justify-between rounded-lg px-3 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                                      ingredientForm.unit === unit
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    <span>{unit}</span>
+                                  </button>
+                                ))}
+                              </>
+                            ) : (
+                              <div className="px-3 py-2 text-sm font-semibold text-gray-500">
+                                {ingredientForm.unit.trim() || "Không có kết quả"}
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
 
                     <button
                       type="submit"
-                      disabled={submittingIngredient}
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      disabled={
+                        submittingIngredient ||
+                        !ingredientForm.name.trim() ||
+                        !ingredientForm.unit.trim()
+                      }
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,0.18)] transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                     >
                       <Plus size={18} weight="bold" />
                       {submittingIngredient ? "Đang thêm..." : "Thêm nguyên liệu"}
