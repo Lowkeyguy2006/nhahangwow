@@ -11,6 +11,20 @@ export const ROLE_HOME = {
 };
 
 export const FEATURE_PERMISSIONS = {
+  adminMenu: {
+    canCreateMenuItem: true,
+    canManageCategories: true,
+    canEditRecipes: true,
+    canToggleMenuItem: true,
+    canDeleteMenuItem: true,
+  },
+  kitchenMenu: {
+    canCreateMenuItem: false,
+    canManageCategories: false,
+    canEditRecipes: false,
+    canToggleMenuItem: false,
+    canDeleteMenuItem: false,
+  },
   adminWarehouse: {
     canViewInventory: true,
     canViewLogs: true,
