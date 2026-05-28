@@ -1,27 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
-import { ForkKnife, Plus, WarningCircle, CheckCircle } from "@phosphor-icons/react";
+import {
+  CheckCircle,
+  ForkKnife,
+  PencilSimple,
+  Plus,
+  Tag,
+  Trash,
+  WarningCircle,
+  X,
+} from "@phosphor-icons/react";
 import Layout from "../../components/Layout";
 import API from "../../services/api";
-
-const categories = [
-  { id: null, label: "Tất cả" },
-  { id: 1, label: "Món chính" },
-  { id: 2, label: "Món phụ" },
-  { id: 3, label: "Đồ uống" },
-  { id: 4, label: "Tráng miệng" },
-];
 
 const STATUS_COLOR = {
   true: "text-green-500",
   false: "text-gray-400",
 };
 
+const CATEGORY_TONES = [
+  "bg-blue-100 text-blue-600",
+  "bg-purple-100 text-purple-600",
+  "bg-yellow-100 text-yellow-700",
+  "bg-pink-100 text-pink-600",
+  "bg-teal-100 text-teal-700",
+  "bg-orange-100 text-orange-700",
+];
+
+const createCategoryDrafts = (items) =>
+  items.reduce((drafts, category) => ({
+    ...drafts,
+    [category.id]: category.name,
+  }), {});
+
 export default function MenuPage() {
   const [menu, setMenu] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryDrafts, setCategoryDrafts] = useState({});
+  const [categoryBusy, setCategoryBusy] = useState(false);
   const [recipePreviewItem, setRecipePreviewItem] = useState(null);
   const [editingRecipe, setEditingRecipe] = useState(false);
   const [editRecipeRows, setEditRecipeRows] = useState([
@@ -49,16 +70,26 @@ export default function MenuPage() {
 
     const loadData = async () => {
       try {
-        const [menuRes, ingredientsRes, recipesRes] = await Promise.all([
+        const [menuRes, categoriesRes, ingredientsRes, recipesRes] = await Promise.all([
           API.get("/api/menu"),
+          API.get("/api/menu/categories"),
           API.get("/api/inventory"),
           API.get("/api/inventory/recipes"),
         ]);
 
         if (isMounted) {
+          const categoryData = categoriesRes.data || [];
           setMenu(menuRes.data || []);
+          setCategories(categoryData);
+          setCategoryDrafts(createCategoryDrafts(categoryData));
           setIngredients(ingredientsRes.data || []);
           setRecipes(recipesRes.data || []);
+          setForm((current) => ({
+            ...current,
+            category_id: categoryData.some((category) => category.id === current.category_id)
+              ? current.category_id
+              : categoryData[0]?.id || "",
+          }));
         }
       } catch (err) {
         if (isMounted) {
@@ -78,6 +109,14 @@ export default function MenuPage() {
       clearTimeout(timer);
     };
   }, []);
+
+  const allCategories = useMemo(
+    () => [
+      { id: null, label: "Tất cả" },
+      ...categories.map((category) => ({ id: category.id, label: category.name })),
+    ],
+    [categories],
+  );
 
   const filtered = useMemo(() => {
     if (activeCategory === null) {
@@ -99,6 +138,27 @@ export default function MenuPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCategories = async () => {
+    const categoriesRes = await API.get("/api/menu/categories");
+    const categoryData = categoriesRes.data || [];
+
+    setCategories(categoryData);
+    setCategoryDrafts(createCategoryDrafts(categoryData));
+    setActiveCategory((current) =>
+      current !== null && !categoryData.some((category) => category.id === current)
+        ? null
+        : current,
+    );
+    setForm((current) => ({
+      ...current,
+      category_id: categoryData.some((category) => category.id === current.category_id)
+        ? current.category_id
+        : categoryData[0]?.id || "",
+    }));
+
+    return categoryData;
   };
 
   const getIngredient = (id) =>
@@ -132,7 +192,13 @@ export default function MenuPage() {
   };
 
   const resetForm = () => {
-    setForm({ name: "", price: "", description: "", category_id: 1, image_url: "" });
+    setForm({
+      name: "",
+      price: "",
+      description: "",
+      category_id: categories[0]?.id || "",
+      image_url: "",
+    });
     setRecipeRows([{ ingredient_id: "", amount: "" }]);
   };
 
@@ -221,13 +287,93 @@ export default function MenuPage() {
     }
   };
 
+  const handleCreateCategory = async (event) => {
+    event.preventDefault();
+    const name = categoryName.trim();
+
+    if (!name) {
+      setError("Vui lòng nhập tên danh mục.");
+      return;
+    }
+
+    setCategoryBusy(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await API.post("/api/menu/categories", { name });
+      const category = response.data?.category;
+      const categoryData = await fetchCategories();
+
+      setCategoryName("");
+      setSuccess("Đã thêm danh mục mới.");
+      if (category?.id || categoryData[0]?.id) {
+        setActiveCategory(category?.id || categoryData[0].id);
+        setPage(1);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Không thêm được danh mục.");
+    } finally {
+      setCategoryBusy(false);
+    }
+  };
+
+  const handleUpdateCategory = async (categoryId) => {
+    const name = String(categoryDrafts[categoryId] || "").trim();
+
+    if (!name) {
+      setError("Vui lòng nhập tên danh mục.");
+      return;
+    }
+
+    setCategoryBusy(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await API.put(`/api/menu/categories/${categoryId}`, { name });
+      await Promise.all([fetchCategories(), fetchMenu()]);
+      setSuccess("Đã cập nhật danh mục.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Không cập nhật được danh mục.");
+    } finally {
+      setCategoryBusy(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    if (!window.confirm(`Xóa danh mục "${category.name}"?`)) return;
+
+    setCategoryBusy(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await API.delete(`/api/menu/categories/${category.id}`);
+      await Promise.all([fetchCategories(), fetchMenu()]);
+      setSuccess("Đã xóa danh mục.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Không xóa được danh mục.");
+    } finally {
+      setCategoryBusy(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.category_id) {
+      setError("Hãy tạo danh mục trước khi thêm món.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     setSuccess("");
     try {
-      const menuRes = await API.post("/api/menu", form);
+      const menuRes = await API.post("/api/menu", {
+        ...form,
+        category_id: Number(form.category_id),
+      });
       const menuItemId = menuRes.data.id;
       const validRecipeRows = recipeRows.filter((row) => row.ingredient_id && Number(row.amount) > 0);
 
@@ -282,7 +428,10 @@ export default function MenuPage() {
     );
 
   const getCategoryLabel = (id) =>
-    categories.find((c) => c.id === id)?.label || "N/A";
+    categories.find((category) => category.id === id)?.name || "N/A";
+
+  const getCategoryTone = (id) =>
+    CATEGORY_TONES[Math.abs(Number(id) || 0) % CATEGORY_TONES.length];
 
   // Pagination
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -328,12 +477,17 @@ export default function MenuPage() {
             <div className="admin-panel-pad flex-1">
               <div className="flex items-center justify-between mb-3">
                 <p className="admin-section-title">Danh mục nhanh</p>
-                <button className="text-xs font-black text-emerald-700 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => setCategoryManagerOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-black text-emerald-700 transition-colors hover:bg-emerald-50"
+                >
+                  <Tag size={14} weight="bold" />
                   Quản lý danh mục
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
+                {allCategories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => {
@@ -423,12 +577,7 @@ export default function MenuPage() {
 
                       {/* Danh mục */}
                       <td className="px-5 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          item.category_id === 1 ? "bg-blue-100 text-blue-600" :
-                          item.category_id === 2 ? "bg-purple-100 text-purple-600" :
-                          item.category_id === 3 ? "bg-yellow-100 text-yellow-600" :
-                          "bg-pink-100 text-pink-600"
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryTone(item.category_id)}`}>
                           {getCategoryLabel(item.category_id)}
                         </span>
                       </td>
@@ -522,6 +671,102 @@ export default function MenuPage() {
           </div>
         </div>
       </div>
+
+      {categoryManagerOpen && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/20 px-4 py-6 backdrop-blur-[1px]"
+          onClick={() => setCategoryManagerOpen(false)}
+        >
+          <div
+            className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-gray-900/5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 bg-emerald-50/70 px-5 py-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
+                  Thực đơn
+                </p>
+                <h3 className="mt-1 text-xl font-bold text-gray-900">
+                  Quản lý danh mục
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryManagerOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                aria-label="Đóng quản lý danh mục"
+              >
+                <X size={17} weight="bold" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-5">
+              <form onSubmit={handleCreateCategory} className="mb-4 flex gap-2">
+                <input
+                  type="text"
+                  value={categoryName}
+                  onChange={(event) => setCategoryName(event.target.value)}
+                  placeholder="Tên danh mục mới"
+                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-gray-200 px-4 text-sm text-gray-800 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                />
+                <button
+                  type="submit"
+                  disabled={categoryBusy}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-800 disabled:opacity-50"
+                >
+                  <Plus size={16} weight="bold" />
+                  Thêm
+                </button>
+              </form>
+
+              <div className="space-y-2">
+                {categories.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center text-sm font-semibold text-gray-500">
+                    Chưa có danh mục nào
+                  </div>
+                ) : (
+                  categories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="grid gap-2 rounded-xl border border-gray-100 bg-gray-50/70 p-2 sm:grid-cols-[1fr_auto_auto]"
+                    >
+                      <input
+                        type="text"
+                        value={categoryDrafts[category.id] ?? category.name}
+                        onChange={(event) =>
+                          setCategoryDrafts((drafts) => ({
+                            ...drafts,
+                            [category.id]: event.target.value,
+                          }))
+                        }
+                        className="min-h-10 min-w-0 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-800 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateCategory(category.id)}
+                        disabled={categoryBusy || (categoryDrafts[category.id] ?? category.name).trim() === category.name}
+                        className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-40"
+                      >
+                        <PencilSimple size={15} weight="bold" />
+                        Lưu
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(category)}
+                        disabled={categoryBusy}
+                        className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 text-xs font-bold text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40"
+                      >
+                        <Trash size={15} weight="bold" />
+                        Xóa
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {recipePreviewItem && (
         <div
@@ -746,9 +991,13 @@ export default function MenuPage() {
                     value={form.category_id}
                     onChange={(e) => setForm({ ...form, category_id: Number(e.target.value) })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
                   >
-                    {categories.filter(c => c.id !== null).map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                    {categories.length === 0 ? (
+                      <option value="">Chưa có danh mục</option>
+                    ) : null}
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
