@@ -16,12 +16,14 @@ export const FEATURE_PERMISSIONS = {
     canViewLogs: true,
     canMoveStock: true,
     canCreateIngredient: true,
+    canDeleteIngredient: true,
   },
   kitchenWarehouse: {
     canViewInventory: true,
     canViewLogs: true,
     canMoveStock: true,
     canCreateIngredient: false,
+    canDeleteIngredient: false,
   },
 };
 

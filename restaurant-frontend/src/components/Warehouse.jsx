@@ -8,6 +8,7 @@ import {
   MagnifyingGlass,
   Package,
   Plus,
+  Trash,
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
@@ -95,6 +96,8 @@ export default function Warehouse({ permissions }) {
   const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
   const [submittingIngredient, setSubmittingIngredient] = useState(false);
   const [submittingMovement, setSubmittingMovement] = useState(false);
+  const [deletingIngredientId, setDeletingIngredientId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [logOpen, setLogOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -242,6 +245,29 @@ export default function Warehouse({ permissions }) {
     }
   };
 
+  const handleDeleteIngredient = async (ingredient) => {
+    setDeletingIngredientId(ingredient.id);
+    setNotice("");
+    setError("");
+
+    try {
+      await API.delete(`/api/inventory/${ingredient.id}`);
+      setNotice("Đã xóa nguyên liệu khỏi kho.");
+      setMovementForm((current) => (
+        String(current.ingredient_id) === String(ingredient.id)
+          ? { ...current, ingredient_id: "" }
+          : current
+      ));
+      setIngredientSearch((current) => (current === ingredient.name ? "" : current));
+      await fetchInventory();
+      setDeleteTarget(null);
+    } catch (err) {
+      setError(err.response?.data?.message || "Không xóa được nguyên liệu.");
+    } finally {
+      setDeletingIngredientId(null);
+    }
+  };
+
   return (
     <Layout>
       <div className="admin-page">
@@ -320,6 +346,9 @@ export default function Warehouse({ permissions }) {
                           <th className="px-4 py-2.5 text-left">Tồn kho</th>
                           <th className="px-4 py-2.5 text-left">Mức tối thiểu</th>
                           <th className="px-4 py-2.5 text-left">Trạng thái</th>
+                          {permissions.canDeleteIngredient ? (
+                            <th className="px-4 py-2.5 text-right">Thao tác</th>
+                          ) : null}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -335,6 +364,20 @@ export default function Warehouse({ permissions }) {
                             <td className="px-4 py-2.5">
                               <StockBadge ingredient={ingredient} />
                             </td>
+                            {permissions.canDeleteIngredient ? (
+                              <td className="px-4 py-2.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteTarget(ingredient)}
+                                  disabled={deletingIngredientId === ingredient.id}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                                  aria-label={`Xóa ${ingredient.name}`}
+                                  title="Xóa nguyên liệu"
+                                >
+                                  <Trash size={17} />
+                                </button>
+                              </td>
+                            ) : null}
                           </tr>
                         ))}
                       </tbody>
@@ -353,6 +396,17 @@ export default function Warehouse({ permissions }) {
                           </div>
                           <StockBadge ingredient={ingredient} />
                         </div>
+                        {permissions.canDeleteIngredient ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(ingredient)}
+                            disabled={deletingIngredientId === ingredient.id}
+                            className="mt-3 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                          >
+                            <Trash size={16} />
+                            Xóa nguyên liệu
+                          </button>
+                        ) : null}
                       </article>
                     ))}
                   </div>
@@ -718,6 +772,65 @@ export default function Warehouse({ permissions }) {
                     </div>
                   </div>
                 )}
+              </section>
+            </div>
+          ) : null}
+
+          {deleteTarget ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4">
+              <section className="w-full max-w-md rounded-lg border border-red-100 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.22)]">
+                <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                    <WarningCircle size={22} weight="duotone" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="font-black text-slate-950">Xóa nguyên liệu</h3>
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      {deleteTarget.name}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(null)}
+                    disabled={deletingIngredientId === deleteTarget.id}
+                    className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                    aria-label="Đóng xác nhận xóa"
+                  >
+                    <X size={17} weight="bold" />
+                  </button>
+                </div>
+
+                <div className="px-5 py-4">
+                  <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+                    <p className="text-xs font-bold text-slate-500">Tồn kho hiện tại</p>
+                    <p className="mt-1 text-sm font-black text-slate-950">
+                      {formatNumber(deleteTarget.quantity)} {deleteTarget.unit}
+                    </p>
+                  </div>
+                  <p className="mt-3 text-sm font-medium leading-5 text-slate-500">
+                    Thao tác này sẽ xóa nguyên liệu khỏi danh sách tồn kho. Nếu nguyên liệu đang được dùng trong công thức hoặc lịch sử kho, hệ thống có thể từ chối xóa.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(null)}
+                    disabled={deletingIngredientId === deleteTarget.id}
+                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteIngredient(deleteTarget)}
+                    disabled={deletingIngredientId === deleteTarget.id}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-black text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                  >
+                    <Trash size={16} weight="bold" />
+                    {deletingIngredientId === deleteTarget.id ? "Đang xóa..." : "Xóa"}
+                  </button>
+                </div>
               </section>
             </div>
           ) : null}

@@ -61,16 +61,49 @@ exports.updateIngredient = async (req, res) => {
 
 // XÓA NGUYÊN LIỆU
 exports.deleteIngredient = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
-    const [result] = await db.query(
-      'DELETE FROM ingredients WHERE id=?', [req.params.id]
+    await connection.beginTransaction();
+
+    const [ingredient] = await connection.query(
+      'SELECT name, unit FROM ingredients WHERE id=?',
+      [req.params.id]
     );
-    if (result.affectedRows === 0) {
+
+    if (ingredient.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: 'Không tìm thấy nguyên liệu!' });
     }
+
+    await connection.query(
+      `UPDATE inventory_logs
+       SET ingredient_name = COALESCE(ingredient_name, ?),
+           unit = COALESCE(unit, ?),
+           ingredient_id = NULL
+       WHERE ingredient_id = ?`,
+      [ingredient[0].name, ingredient[0].unit || null, req.params.id]
+    );
+
+    await connection.query('DELETE FROM recipes WHERE ingredient_id=?', [req.params.id]);
+
+    const [result] = await connection.query(
+      'DELETE FROM ingredients WHERE id=?',
+      [req.params.id]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Không tìm thấy nguyên liệu!' });
+    }
+
+    await connection.commit();
     res.json({ message: 'Xóa nguyên liệu thành công!' });
   } catch (err) {
+    await connection.rollback();
     res.status(500).json({ message: 'Lỗi server', error: err.message });
+  } finally {
+    connection.release();
   }
 };
 
@@ -79,7 +112,7 @@ exports.importStock = async (req, res) => {
   const { ingredient_id, quantity, note } = req.body;
   try {
     const [ingredient] = await db.query(
-      'SELECT unit FROM ingredients WHERE id=?', [ingredient_id]
+      'SELECT name, unit FROM ingredients WHERE id=?', [ingredient_id]
     );
     if (ingredient.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy nguyên liệu!' });
@@ -94,9 +127,9 @@ exports.importStock = async (req, res) => {
     // Ghi log nhập kho
     await db.query(
       `INSERT INTO inventory_logs 
-        (ingredient_id, type, quantity, unit, note, account_id) 
-       VALUES (?, "nhap", ?, ?, ?, ?)`,
-      [ingredient_id, quantity, ingredient[0].unit || null, note || null, req.user.id]
+        (ingredient_id, ingredient_name, type, quantity, unit, note, account_id) 
+       VALUES (?, ?, "nhap", ?, ?, ?, ?)`,
+      [ingredient_id, ingredient[0].name, quantity, ingredient[0].unit || null, note || null, req.user.id]
     );
 
     res.json({ message: 'Nhập kho thành công!' });
@@ -129,9 +162,9 @@ exports.exportStock = async (req, res) => {
     // Ghi log xuất kho
     await db.query(
       `INSERT INTO inventory_logs 
-        (ingredient_id, type, quantity, unit, note, account_id) 
-       VALUES (?, "xuat", ?, ?, ?, ?)`,
-      [ingredient_id, quantity, ingredient[0].unit || null, note || null, req.user.id]
+        (ingredient_id, ingredient_name, type, quantity, unit, note, account_id) 
+       VALUES (?, ?, "xuat", ?, ?, ?, ?)`,
+      [ingredient_id, ingredient[0].name, quantity, ingredient[0].unit || null, note || null, req.user.id]
     );
 
     res.json({ message: 'Xuất kho thành công!' });
@@ -144,7 +177,7 @@ exports.exportStock = async (req, res) => {
 exports.getInventoryLogs = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT il.*, i.name as ingredient_name, COALESCE(il.unit, i.unit) as unit, a.full_name as account_name
+      SELECT il.*, COALESCE(il.ingredient_name, i.name) as ingredient_name, COALESCE(il.unit, i.unit) as unit, a.full_name as account_name
       FROM inventory_logs il
       LEFT JOIN ingredients i ON il.ingredient_id = i.id
       LEFT JOIN accounts a ON il.account_id = a.id
