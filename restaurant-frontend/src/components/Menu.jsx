@@ -533,20 +533,19 @@ export default function Menu({ permissions = {} }) {
                   <th className="text-left px-5 py-4">DANH MỤC</th>
                   <th className="text-left px-5 py-4">GIÁ BÁN</th>
                   <th className="text-left px-5 py-4">TRẠNG THÁI</th>
-                  <th className="text-left px-5 py-4">TỒN KHO</th>
                   <th className="text-left px-5 py-4">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-400">
+                    <td colSpan={5} className="text-center py-12 text-gray-400">
                       Đang tải...
                     </td>
                   </tr>
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-400">
+                    <td colSpan={5} className="text-center py-12 text-gray-400">
                       <ForkKnife size={34} className="mx-auto mb-2 text-slate-300" weight="duotone" />
                       <p>Chưa có món ăn nào</p>
                     </td>
@@ -604,11 +603,6 @@ export default function Menu({ permissions = {} }) {
                           <span className={`w-2 h-2 rounded-full ${item.is_visible ? "bg-green-500" : "bg-gray-300"}`}></span>
                           {item.is_visible ? "Sẵn sàng" : "Đã ẩn"}
                         </span>
-                      </td>
-
-                      {/* Tồn kho */}
-                      <td className="px-5 py-4 text-sm text-gray-600">
-                        Không giới hạn
                       </td>
 
                       {/* Thao tác */}
