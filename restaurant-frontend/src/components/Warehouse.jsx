@@ -17,7 +17,7 @@ import API from "../services/api";
 
 const emptyIngredientForm = {
   name: "",
-  unit: "kg",
+  unit: "",
 };
 
 const emptyMovementForm = {
@@ -117,7 +117,6 @@ export default function Warehouse({ permissions }) {
           ...current,
           ingredient_id: current.ingredient_id || nextIngredients[0]?.id || "",
         }));
-        setIngredientSearch((current) => current || nextIngredients[0]?.name || "");
       }
     } catch {
       if (shouldUpdate()) setError("Không tải được dữ liệu kho nguyên liệu.");
@@ -212,6 +211,7 @@ export default function Warehouse({ permissions }) {
         min_quantity: 0,
       });
       setIngredientForm(emptyIngredientForm);
+      setUnitDropdownOpen(false);
       setNotice("Đã thêm nguyên liệu mới vào kho.");
       await fetchInventory();
     } catch (err) {
@@ -236,6 +236,8 @@ export default function Warehouse({ permissions }) {
         note: movementForm.note,
       });
       setMovementForm((current) => ({ ...current, quantity: "", note: "" }));
+      setIngredientSearch("");
+      setIngredientDropdownOpen(false);
       setNotice(movementForm.type === "nhap" ? "Đã nhập kho thành công." : "Đã xuất kho thành công.");
       await fetchInventory();
     } catch (err) {
