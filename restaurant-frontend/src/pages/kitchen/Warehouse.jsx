@@ -3,10 +3,12 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle,
+  ClockCounterClockwise,
   MagnifyingGlass,
   Package,
   Plus,
   WarningCircle,
+  X,
 } from "@phosphor-icons/react";
 import Layout from "../../components/Layout";
 import API from "../../services/api";
@@ -25,6 +27,18 @@ const emptyMovementForm = {
 
 const formatNumber = (value) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(Number(value) || 0);
+
+const formatDateTime = (value) => {
+  if (!value) return "Chưa có thời gian";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
+};
 
 function StockBadge({ ingredient }) {
   const quantity = Number(ingredient.quantity) || 0;
@@ -74,6 +88,7 @@ export default function WarehousePage() {
   const [ingredientDropdownOpen, setIngredientDropdownOpen] = useState(false);
   const [submittingIngredient, setSubmittingIngredient] = useState(false);
   const [submittingMovement, setSubmittingMovement] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -234,7 +249,18 @@ export default function WarehousePage() {
             <div className="admin-panel overflow-hidden">
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                 <h3 className="font-semibold text-gray-900">Tồn kho hiện tại</h3>
-                <span className="text-xs font-medium text-gray-500">{ingredients.length} nguyên liệu</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">{ingredients.length} nguyên liệu</span>
+                  <button
+                    type="button"
+                    onClick={() => setLogOpen(true)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                    aria-label="Xem nhật ký kho"
+                    title="Nhật ký kho"
+                  >
+                    <ClockCounterClockwise size={19} weight="duotone" />
+                  </button>
+                </div>
               </div>
 
               {inventoryLoading ? (
@@ -478,22 +504,75 @@ export default function WarehousePage() {
             </div>
           </div>
 
-          {logs.length > 0 ? (
-            <div className="admin-panel-pad">
-              <h3 className="font-semibold text-gray-900">Nhật ký kho gần đây</h3>
-              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                {logs.slice(0, 4).map((log) => (
-                  <div key={log.id} className="rounded-lg bg-gray-50 p-3">
-                    <p className={`text-xs font-bold uppercase ${log.type === "nhap" ? "text-emerald-700" : "text-amber-700"}`}>
-                      {log.type === "nhap" ? "Nhập kho" : "Xuất kho"}
+          {logOpen ? (
+            <div className="fixed inset-0 z-50 flex items-start justify-end bg-slate-950/30 p-4 backdrop-blur-sm sm:p-6">
+              <section className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+                <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">
+                      Lịch sử
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-gray-900">{log.ingredient_name}</p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {formatNumber(log.quantity)} {log.unit || ""} · {log.account_name || "Hệ thống"}
+                    <h3 className="mt-1 text-lg font-black text-gray-950">Nhật ký kho</h3>
+                    <p className="mt-1 text-sm font-medium text-gray-500">{logs.length} giao dịch nhập xuất</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLogOpen(false)}
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                    aria-label="Đóng nhật ký kho"
+                  >
+                    <X size={18} weight="bold" />
+                  </button>
+                </div>
+
+                {logs.length === 0 ? (
+                  <div className="flex min-h-72 flex-col items-center justify-center px-6 py-10 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                      <ClockCounterClockwise size={24} weight="duotone" />
+                    </div>
+                    <p className="mt-4 font-semibold text-gray-900">Chưa có nhật ký kho</p>
+                    <p className="mt-2 max-w-sm text-sm text-gray-500">
+                      Khi có nhập hoặc xuất kho, lịch sử sẽ hiển thị đầy đủ ở đây.
                     </p>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="overflow-y-auto p-4">
+                    <div className="space-y-2">
+                      {logs.map((log) => (
+                        <article key={log.id} className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-black text-gray-950">{log.ingredient_name}</p>
+                              <p className="mt-1 text-xs font-semibold text-gray-500">
+                                {formatDateTime(log.created_at)} · {log.account_name || "Hệ thống"}
+                              </p>
+                            </div>
+                            <span
+                              className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${
+                                log.type === "nhap"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {log.type === "nhap" ? "Nhập kho" : "Xuất kho"}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                            <span className="rounded-lg bg-white px-2.5 py-1 font-bold text-gray-800">
+                              {formatNumber(log.quantity)} {log.unit || ""}
+                            </span>
+                            {log.note ? (
+                              <span className="min-w-0 rounded-lg bg-white px-2.5 py-1 font-medium text-gray-500">
+                                {log.note}
+                              </span>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           ) : null}
         </section>
