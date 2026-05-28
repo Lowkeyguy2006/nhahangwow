@@ -1,4 +1,8 @@
 const db = require('../config/db');
+const {
+  hideMenuItemsWithOutOfStockIngredients,
+  showMenuItemsWithAvailableIngredients,
+} = require('../services/menuAvailabilityService');
 
 // LẤY TẤT CẢ NGUYÊN LIỆU
 exports.getAllIngredients = async (req, res) => {
@@ -124,6 +128,8 @@ exports.importStock = async (req, res) => {
       [quantity, ingredient_id]
     );
 
+    await showMenuItemsWithAvailableIngredients(db, [ingredient_id]);
+
     // Ghi log nhập kho
     await db.query(
       `INSERT INTO inventory_logs 
@@ -158,6 +164,8 @@ exports.exportStock = async (req, res) => {
       'UPDATE ingredients SET quantity = quantity - ? WHERE id=?',
       [quantity, ingredient_id]
     );
+
+    await hideMenuItemsWithOutOfStockIngredients(db, [ingredient_id]);
 
     // Ghi log xuất kho
     await db.query(
@@ -242,6 +250,10 @@ exports.updateMenuItemRecipes = async (req, res) => {
             [menuItemId, Number(recipe.ingredient_id), Number(recipe.amount)]
           )
         )
+      );
+      await hideMenuItemsWithOutOfStockIngredients(
+        connection,
+        validRecipes.map((recipe) => recipe.ingredient_id)
       );
     }
 

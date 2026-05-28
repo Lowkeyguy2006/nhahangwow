@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { hideMenuItemsWithOutOfStockIngredients } = require('../services/menuAvailabilityService');
 
 // LẤY DANH MỤC MÓN ĂN
 exports.getCategories = async (req, res) => {
@@ -88,6 +89,8 @@ exports.deleteCategory = async (req, res) => {
 // LẤY TẤT CẢ MÓN ĂN
 exports.getAllItems = async (req, res) => {
   try {
+    await hideMenuItemsWithOutOfStockIngredients(db);
+
     const [rows] = await db.query(`
       SELECT m.*, c.name as category_name 
       FROM menu_items m
