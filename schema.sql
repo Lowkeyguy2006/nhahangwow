@@ -157,6 +157,7 @@ CREATE TABLE inventory_logs (
   ingredient_id INT,
   type ENUM('nhap', 'xuat') NOT NULL,
   quantity DECIMAL(10,2) NOT NULL,
+  unit VARCHAR(20),
   note TEXT,
   account_id INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -78,6 +78,13 @@ exports.deleteIngredient = async (req, res) => {
 exports.importStock = async (req, res) => {
   const { ingredient_id, quantity, note } = req.body;
   try {
+    const [ingredient] = await db.query(
+      'SELECT unit FROM ingredients WHERE id=?', [ingredient_id]
+    );
+    if (ingredient.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy nguyên liệu!' });
+    }
+
     // Cập nhật số lượng tồn kho
     await db.query(
       'UPDATE ingredients SET quantity = quantity + ? WHERE id=?',
@@ -87,9 +94,9 @@ exports.importStock = async (req, res) => {
     // Ghi log nhập kho
     await db.query(
       `INSERT INTO inventory_logs 
-        (ingredient_id, type, quantity, note, account_id) 
-       VALUES (?, "nhap", ?, ?, ?)`,
-      [ingredient_id, quantity, note || null, req.user.id]
+        (ingredient_id, type, quantity, unit, note, account_id) 
+       VALUES (?, "nhap", ?, ?, ?, ?)`,
+      [ingredient_id, quantity, ingredient[0].unit || null, note || null, req.user.id]
     );
 
     res.json({ message: 'Nhập kho thành công!' });
@@ -122,9 +129,9 @@ exports.exportStock = async (req, res) => {
     // Ghi log xuất kho
     await db.query(
       `INSERT INTO inventory_logs 
-        (ingredient_id, type, quantity, note, account_id) 
-       VALUES (?, "xuat", ?, ?, ?)`,
-      [ingredient_id, quantity, note || null, req.user.id]
+        (ingredient_id, type, quantity, unit, note, account_id) 
+       VALUES (?, "xuat", ?, ?, ?, ?)`,
+      [ingredient_id, quantity, ingredient[0].unit || null, note || null, req.user.id]
     );
 
     res.json({ message: 'Xuất kho thành công!' });
@@ -137,7 +144,7 @@ exports.exportStock = async (req, res) => {
 exports.getInventoryLogs = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT il.*, i.name as ingredient_name, a.full_name as account_name
+      SELECT il.*, i.name as ingredient_name, COALESCE(il.unit, i.unit) as unit, a.full_name as account_name
       FROM inventory_logs il
       LEFT JOIN ingredients i ON il.ingredient_id = i.id
       LEFT JOIN accounts a ON il.account_id = a.id
