@@ -17,6 +17,7 @@ import { ROLES } from "../utils/permissions";
 
 const menuItems = [
   { path: "/admin/dashboard", label: "Tổng quan", icon: SquaresFour },
+  { path: "/staff/order", label: "Sơ đồ & Gọi món", icon: ListChecks },
   { path: "/admin/menu", label: "Thực đơn", icon: ForkKnife },
   { path: "/admin/warehouse", label: "Kho hàng", icon: ChefHat },
   { path: "/admin/reports", label: "Báo cáo", icon: ChartBar },
@@ -29,6 +30,10 @@ const kitchenItems = [
   { path: "/kitchen/warehouse", label: "Kho hàng", icon: ChefHat },
 ];
 
+const staffItems = [
+  { path: "/staff/order", label: "Sơ đồ & Gọi món", icon: ListChecks },
+];
+
 const upcomingItems = [
   { label: "Sơ đồ bàn", icon: ListChecks },
   { label: "Đơn hàng", icon: ListChecks },
@@ -36,10 +41,16 @@ const upcomingItems = [
 
 export default function Sidebar() {
   const navigate = useNavigate();
-  const { user, roleId, isKitchen } = useAuth();
+  const { user, roleId, isKitchen, isStaff } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
-  const displayName = user.full_name || "Admin";
-  const visibleItems = roleId === ROLES.KITCHEN ? kitchenItems : menuItems;
+  const displayName = user.full_name || "Nhân viên";
+  
+  let visibleItems = menuItems;
+  if (roleId === ROLES.KITCHEN) {
+    visibleItems = kitchenItems;
+  } else if (roleId === ROLES.STAFF) {
+    visibleItems = staffItems;
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -67,7 +78,7 @@ export default function Sidebar() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-black text-slate-900">{displayName}</p>
             <p className="text-xs font-semibold text-slate-400">
-              {isKitchen ? "Bộ phận bếp" : "Quản trị nhà hàng"}
+              {isKitchen ? "Bộ phận bếp" : isStaff ? "Nhân viên phục vụ" : "Quản trị nhà hàng"}
             </p>
           </div>
           <CaretDown
@@ -118,29 +129,7 @@ export default function Sidebar() {
           );
         })}
 
-        {!isKitchen ? (
-          <div className="pt-3">
-            <p className="px-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-300">
-              Sắp có
-            </p>
-            <div className="mt-2 space-y-1">
-              {upcomingItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <div
-                    key={item.label}
-                    className="flex min-h-9 items-center gap-2.5 rounded-xl px-3 text-[13px] font-bold text-slate-300"
-                    aria-disabled="true"
-                  >
-                    <Icon size={19} weight="duotone" />
-                    <span>{item.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
+        {/* Placeholder section removed as requested */}
       </nav>
 
     </aside>

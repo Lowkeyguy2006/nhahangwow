@@ -8,6 +8,7 @@ import KitchenMenuPage from "./pages/kitchen/Menu";
 import KitchenWarehousePage from "./pages/kitchen/Warehouse";
 import ReportsPage from "./pages/admin/Report";
 import SettingsPage from "./pages/admin/Settings";
+import OrderPage from "./pages/staff/Order";
 import useAuth from "./hooks/useAuth";
 import { canAccess, ROLES } from "./utils/permissions";
 
@@ -31,6 +32,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/staff/order" element={<PrivateRoute roles={[ROLES.STAFF, ROLES.ADMIN]}><OrderPage /></PrivateRoute>} />
         <Route path="/admin/staff" element={<PrivateRoute roles={[ROLES.ADMIN]}><Staff /></PrivateRoute>} />
         <Route path="/admin/menu" element={<PrivateRoute roles={[ROLES.ADMIN]}><MenuPage /></PrivateRoute>}/>
         <Route path="/admin/dashboard" element={<PrivateRoute roles={[ROLES.ADMIN]}><Dashboard /></PrivateRoute>}/>

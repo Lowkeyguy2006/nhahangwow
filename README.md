@@ -36,3 +36,10 @@ npm install -D tailwindcss@3 postcss autoprefixer
 npm install axios react-router-dom
 
 npm run dev
+
+--Chay lenh nay de them ban(neu ko muon tu nhap ban):
+cd restaurant-backend
+node src/scripts/seed_menu_ingredients.js
+--Chay lenh nay de them mon(neu ko muon tu nhap mon):
+cd restaurant-backend
+node src/scripts/seed_tables.js

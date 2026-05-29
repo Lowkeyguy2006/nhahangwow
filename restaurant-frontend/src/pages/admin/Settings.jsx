@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Bank,
   CreditCard,
@@ -9,8 +9,11 @@ import {
   QrCode,
   Receipt,
   UploadSimple,
+  Trash,
+  BowlFood,
 } from "@phosphor-icons/react";
 import Layout from "../../components/Layout";
+import API from "../../services/api";
 
 const initialPaymentMethods = [
   {
@@ -51,6 +54,132 @@ export default function SettingsPage() {
   const [logoName, setLogoName] = useState("");
   const [logoError, setLogoError] = useState("");
   const [saveState, setSaveState] = useState("idle");
+
+  // States for Area & Table management
+  const [areas, setAreas] = useState([]);
+  const [tablesList, setTablesList] = useState([]);
+  const [newAreaName, setNewAreaName] = useState("");
+  const [newTableName, setNewTableName] = useState("");
+  const [selectedAreaId, setSelectedAreaId] = useState("");
+  const [mgmtError, setMgmtError] = useState("");
+  const [mgmtSuccess, setMgmtSuccess] = useState("");
+
+  const fetchMgmtData = async () => {
+    try {
+      const [areasRes, tablesRes] = await Promise.all([
+        API.get("/api/tables/areas"),
+        API.get("/api/tables"),
+      ]);
+      setAreas(areasRes.data || []);
+      setTablesList(tablesRes.data || []);
+      if (areasRes.data?.length > 0) {
+        setSelectedAreaId(areasRes.data[0].id.toString());
+      }
+    } catch (err) {
+      console.error("Lỗi tải thông tin quản lý bàn:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMgmtData();
+  }, []);
+
+  const handleAddArea = async (e) => {
+    e.preventDefault();
+    if (!newAreaName.trim()) return;
+    setMgmtError("");
+    try {
+      await API.post("/api/tables/areas", { name: newAreaName });
+      setNewAreaName("");
+      setMgmtSuccess("Đã thêm khu vực mới!");
+      setTimeout(() => setMgmtSuccess(""), 3000);
+      await fetchMgmtData();
+    } catch (err) {
+      setMgmtError(err.response?.data?.message || "Lỗi khi thêm khu vực.");
+    }
+  };
+
+  const handleDeleteArea = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa khu vực này? Tất cả bàn thuộc khu vực này sẽ cần được cập nhật.")) return;
+    setMgmtError("");
+    try {
+      await API.delete(`/api/tables/areas/${id}`);
+      setMgmtSuccess("Đã xóa khu vực!");
+      setTimeout(() => setMgmtSuccess(""), 3000);
+      await fetchMgmtData();
+    } catch (err) {
+      setMgmtError(err.response?.data?.message || "Lỗi khi xóa khu vực.");
+    }
+  };
+
+  const handleAddTable = async (e) => {
+    e.preventDefault();
+    if (!newTableName.trim() || !selectedAreaId) return;
+    setMgmtError("");
+    try {
+      await API.post("/api/tables", {
+        name: newTableName,
+        area_id: Number(selectedAreaId),
+      });
+      setNewTableName("");
+      setMgmtSuccess("Đã tạo bàn ăn mới!");
+      setTimeout(() => setMgmtSuccess(""), 3000);
+      await fetchMgmtData();
+    } catch (err) {
+      setMgmtError(err.response?.data?.message || "Lỗi khi tạo bàn.");
+    }
+  };
+
+  const handleDeleteTable = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa bàn ăn này không?")) return;
+    setMgmtError("");
+    try {
+      await API.delete(`/api/tables/${id}`);
+      setMgmtSuccess("Đã xóa bàn thành công!");
+      setTimeout(() => setMgmtSuccess(""), 3000);
+      await fetchMgmtData();
+    } catch (err) {
+      setMgmtError(err.response?.data?.message || "Lỗi khi xóa bàn.");
+    }
+  };
+
+  // Editing states for Area & Table
+  const [editingAreaId, setEditingAreaId] = useState(null);
+  const [editingAreaName, setEditingAreaName] = useState("");
+  const [editingTableId, setEditingTableId] = useState(null);
+  const [editingTableName, setEditingTableName] = useState("");
+  const [editingTableAreaId, setEditingTableAreaId] = useState("");
+
+  const handleEditArea = async (id) => {
+    if (!editingAreaName.trim()) return;
+    setMgmtError("");
+    try {
+      await API.put(`/api/tables/areas/${id}`, { name: editingAreaName });
+      setEditingAreaId(null);
+      setMgmtSuccess("Đã cập nhật tên khu vực!");
+      setTimeout(() => setMgmtSuccess(""), 3000);
+      await fetchMgmtData();
+    } catch (err) {
+      setMgmtError(err.response?.data?.message || "Lỗi khi cập nhật khu vực.");
+    }
+  };
+
+  const handleEditTable = async (id) => {
+    if (!editingTableName.trim() || !editingTableAreaId) return;
+    setMgmtError("");
+    try {
+      await API.put(`/api/tables/${id}`, {
+        name: editingTableName,
+        area_id: Number(editingTableAreaId),
+      });
+      setEditingTableId(null);
+      setMgmtSuccess("Đã cập nhật bàn ăn thành công!");
+      setTimeout(() => setMgmtSuccess(""), 3000);
+      await fetchMgmtData();
+    } catch (err) {
+      setMgmtError(err.response?.data?.message || "Lỗi khi cập nhật bàn ăn.");
+    }
+  };
 
   const enabledMethods = useMemo(
     () => paymentMethods.filter((method) => method.active).length,

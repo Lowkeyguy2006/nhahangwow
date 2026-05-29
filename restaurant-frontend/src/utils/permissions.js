@@ -19,11 +19,11 @@ export const FEATURE_PERMISSIONS = {
     canDeleteMenuItem: true,
   },
   kitchenMenu: {
-    canCreateMenuItem: false,
-    canManageCategories: false,
-    canEditRecipes: false,
-    canToggleMenuItem: false,
-    canDeleteMenuItem: false,
+    canCreateMenuItem: true,
+    canManageCategories: true,
+    canEditRecipes: true,
+    canToggleMenuItem: true,
+    canDeleteMenuItem: true,
   },
   adminWarehouse: {
     canViewInventory: true,
@@ -36,8 +36,8 @@ export const FEATURE_PERMISSIONS = {
     canViewInventory: true,
     canViewLogs: true,
     canMoveStock: true,
-    canCreateIngredient: false,
-    canDeleteIngredient: false,
+    canCreateIngredient: true,
+    canDeleteIngredient: true,
   },
 };
 

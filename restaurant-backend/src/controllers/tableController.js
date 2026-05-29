@@ -129,3 +129,45 @@ exports.getAllReservations = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
+// LẤY TẤT CẢ KHU VỰC
+exports.getAllAreas = async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM areas ORDER BY id ASC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+// THÊM KHU VỰC
+exports.createArea = async (req, res) => {
+  const { name } = req.body;
+  try {
+    const [result] = await db.query('INSERT INTO areas (name) VALUES (?)', [name]);
+    res.status(201).json({ message: 'Thêm khu vực thành công!', id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+// XÓA KHU VỰC
+exports.deleteArea = async (req, res) => {
+  try {
+    await db.query('DELETE FROM areas WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Xóa khu vực thành công!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};
+
+// SỬA KHU VỰC
+exports.updateArea = async (req, res) => {
+  const { name } = req.body;
+  try {
+    await db.query('UPDATE areas SET name = ? WHERE id = ?', [name, req.params.id]);
+    res.json({ message: 'Cập nhật khu vực thành công!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};

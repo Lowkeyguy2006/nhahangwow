@@ -22,3 +22,11 @@ exports.isAdmin = (req, res, next) => {
   }
   next();
 };
+
+// Kiểm tra quyền admin hoặc nhà bếp (cho việc sửa đổi thực đơn, định lượng, kho)
+exports.isAdminOrKitchen = (req, res, next) => {
+  if (req.user.role_id !== 1 && req.user.role_id !== 3) {
+    return res.status(403).json({ message: 'Chỉ admin hoặc nhà bếp mới có quyền này!' });
+  }
+  next();
+};

@@ -1,20 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const menuController = require('../controllers/menuController');
-const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
+const { verifyToken, isAdmin, isAdminOrKitchen } = require('../middleware/authMiddleware');
 
 // Public — ai cũng xem được
 router.get('/categories', menuController.getCategories);
 router.get('/', menuController.getAllItems);
 router.get('/:id', menuController.getItemById);
 
-// Admin mới được thêm/sửa/xóa
-router.post('/categories', verifyToken, isAdmin, menuController.createCategory);
-router.put('/categories/:id', verifyToken, isAdmin, menuController.updateCategory);
-router.delete('/categories/:id', verifyToken, isAdmin, menuController.deleteCategory);
-router.post('/', verifyToken, isAdmin, menuController.createItem);
-router.put('/:id', verifyToken, isAdmin, menuController.updateItem);
-router.delete('/:id', verifyToken, isAdmin, menuController.deleteItem);
-router.patch('/:id/toggle', verifyToken, isAdmin, menuController.toggleVisibility);
+// Admin & Bếp được thêm/sửa/xóa
+router.post('/categories', verifyToken, isAdminOrKitchen, menuController.createCategory);
+router.put('/categories/:id', verifyToken, isAdminOrKitchen, menuController.updateCategory);
+router.delete('/categories/:id', verifyToken, isAdminOrKitchen, menuController.deleteCategory);
+router.post('/', verifyToken, isAdminOrKitchen, menuController.createItem);
+router.put('/:id', verifyToken, isAdminOrKitchen, menuController.updateItem);
+router.delete('/:id', verifyToken, isAdminOrKitchen, menuController.deleteItem);
+router.patch('/:id/toggle', verifyToken, isAdminOrKitchen, menuController.toggleVisibility);
 
 module.exports = router;
