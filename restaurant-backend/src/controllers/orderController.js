@@ -10,7 +10,7 @@ exports.createOrder = async (req, res) => {
     );
     // Cập nhật trạng thái bàn
     await db.query(
-      'UPDATE tables SET status="dang_dung" WHERE id=?', [table_id]
+      'UPDATE tables SET status="dang_dung", reserved_at=NULL WHERE id=?', [table_id]
     );
     res.status(201).json({ 
       message: 'Tạo order thành công!', 
@@ -194,7 +194,7 @@ exports.getActiveOrderByTable = async (req, res) => {
 
     // Lấy danh sách món trong order
     const [items] = await db.query(`
-      SELECT oi.*, m.name as mon_ten, m.image_url 
+      SELECT oi.*, m.name as mon_ten, m.image_url, m.unit 
       FROM order_items oi
       LEFT JOIN menu_items m ON oi.menu_item_id = m.id
       WHERE oi.order_id = ? AND oi.status != "huy"
@@ -206,9 +206,9 @@ exports.getActiveOrderByTable = async (req, res) => {
   }
 };
 
-// CHỈNH SỬA MÓN (SỐ LƯỢNG / GHI CHÚ) TRONG ORDER
+// CHỈNH SỬA MÓN (SỐ LƯỢNG / GHI CHÚ / GIÁ CẢ) TRONG ORDER
 exports.updateOrderItem = async (req, res) => {
-  const { quantity, note } = req.body;
+  const { quantity, note, price } = req.body;
   const { id: order_id, itemId } = req.params;
   try {
     const [item] = await db.query(
@@ -217,17 +217,21 @@ exports.updateOrderItem = async (req, res) => {
     if (item.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy món ăn trong order!' });
     }
-    if (item[0].status !== 'cho') {
-      return res.status(400).json({ message: 'Không thể chỉnh sửa món đang nấu hoặc đã hoàn thành!' });
-    }
+    // Cho phép chỉnh sửa thông tin (giá, số lượng, ghi chú) bất kể trạng thái nào của món ăn ở bàn
+
 
     if (quantity <= 0) {
       // Xóa món khỏi order nếu số lượng <= 0
       await db.query('DELETE FROM order_items WHERE id = ?', [itemId]);
     } else {
       await db.query(
-        'UPDATE order_items SET quantity = ?, note = ? WHERE id = ?',
-        [quantity, note !== undefined ? note : item[0].note, itemId]
+        'UPDATE order_items SET quantity = ?, note = ?, price = ? WHERE id = ?',
+        [
+          quantity, 
+          note !== undefined ? note : item[0].note, 
+          price !== undefined ? price : item[0].price,
+          itemId
+        ]
       );
     }
 

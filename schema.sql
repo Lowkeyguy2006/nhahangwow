@@ -44,6 +44,7 @@ CREATE TABLE tables (
   name VARCHAR(20) NOT NULL,
   area_id INT,
   status ENUM('trong', 'dang_dung', 'da_dat') DEFAULT 'trong',
+  reserved_at TIMESTAMP NULL DEFAULT NULL,
   FOREIGN KEY (area_id) REFERENCES areas(id)
 );
 
@@ -73,6 +74,7 @@ CREATE TABLE menu_items (
   price DECIMAL(10,2) NOT NULL,
   category_id INT,
   image_url VARCHAR(255),
+  unit VARCHAR(50) NULL DEFAULT 'phần',
   is_visible BOOLEAN DEFAULT TRUE,
   FOREIGN KEY (category_id) REFERENCES categories(id)
 );
@@ -143,7 +145,7 @@ CREATE TABLE order_items (
   id INT PRIMARY KEY AUTO_INCREMENT,
   order_id INT,
   menu_item_id INT,
-  quantity INT NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
   price DECIMAL(10,2) NOT NULL,
   note TEXT,
   status ENUM('cho', 'dang_nau', 'hoan_thanh', 'huy') DEFAULT 'cho',

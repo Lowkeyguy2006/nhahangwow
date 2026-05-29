@@ -69,6 +69,37 @@ export default function Menu({ permissions = {} }) {
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingMenuItem, setEditingMenuItem] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    price: "",
+    description: "",
+    category_id: "",
+    image_url: "",
+    is_visible: 1
+  });
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+    try {
+      await API.put(`/api/menu/${editingMenuItem.id}`, {
+        ...editForm,
+        category_id: Number(editForm.category_id),
+        price: Number(editForm.price),
+      });
+      setSuccess("Cập nhật món ăn thành công!");
+      setEditingMenuItem(null);
+      fetchMenu();
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi cập nhật món ăn!");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -610,6 +641,28 @@ export default function Menu({ permissions = {} }) {
                         {canToggleMenuItem || canDeleteMenuItem ? (
                           <div className="flex items-center gap-2">
                             {canToggleMenuItem ? (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingMenuItem(item);
+                                    setEditForm({
+                                      name: item.name,
+                                      price: item.price,
+                                      description: item.description || "",
+                                      category_id: item.category_id,
+                                      image_url: item.image_url || "",
+                                      is_visible: item.is_visible
+                                    });
+                                  }}
+                                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800"
+                                >
+                                  Sửa
+                                </button>
+                                <span className="text-gray-200">|</span>
+                              </>
+                            ) : null}
+                            {canToggleMenuItem ? (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -620,7 +673,7 @@ export default function Menu({ permissions = {} }) {
                                 {item.is_visible ? "Ẩn" : "Hiện"}
                               </button>
                             ) : null}
-                            {canToggleMenuItem && canDeleteMenuItem ? (
+                            {(canToggleMenuItem || canDeleteMenuItem) && canDeleteMenuItem ? (
                               <span className="text-gray-200">|</span>
                             ) : null}
                             {canDeleteMenuItem ? (
@@ -1148,6 +1201,116 @@ export default function Menu({ permissions = {} }) {
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {submitting ? "Đang lưu..." : "Lưu món ăn"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {editingMenuItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-800">Chỉnh sửa món ăn</h2>
+              <button
+                onClick={() => setEditingMenuItem(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              {/* Tên món */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tên món ăn
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên món ăn..."
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+
+              {/* Danh mục + Giá */}
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phân loại
+                  </label>
+                  <select
+                    value={editForm.category_id}
+                    onChange={(e) => setEditForm({ ...editForm, category_id: Number(e.target.value) })}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Giá bán (VNĐ)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Nhập giá bán..."
+                    value={editForm.price}
+                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Mô tả */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mô tả món ăn
+                </label>
+                <textarea
+                  placeholder="Mô tả chi tiết món ăn..."
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 min-h-[80px]"
+                />
+              </div>
+
+              {/* Đường dẫn hình ảnh */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Đường dẫn ảnh món ăn (Link ảnh)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nhập link ảnh (nếu có)..."
+                  value={editForm.image_url}
+                  onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingMenuItem(null)}
+                  className="flex-1 border border-gray-200 text-gray-600 rounded-lg py-2.5 text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {submitting ? "Đang lưu..." : "Cập nhật món ăn"}
                 </button>
               </div>
             </form>

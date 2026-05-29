@@ -36,4 +36,22 @@ app.use('/api/customers', customerRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server chạy tại http://localhost:${PORT}`);
+  
+
+  // Thiết lập công việc chạy ngầm quét dọn bàn đặt trước quá 30 phút hàng phút
+  setInterval(async () => {
+    try {
+      const db = require('./config/db');
+      const [result] = await db.query(`
+        UPDATE tables 
+        SET status = 'trong', reserved_at = NULL 
+        WHERE status = 'da_dat' AND reserved_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+      `);
+      if (result.affectedRows > 0) {
+        console.log(`[Hệ thống quét dọn] Đã giải phóng ${result.affectedRows} bàn đặt trước quá 30 phút mà khách không tới.`);
+      }
+    } catch (err) {
+      console.error('Lỗi khi quét dọn bàn đặt trước hết hạn:', err.message);
+    }
+  }, 10000); // Quét mỗi 10 giây cho nhạy và chính xác
 });

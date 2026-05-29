@@ -80,12 +80,20 @@ exports.deleteTable = async (req, res) => {
 
 // CẬP NHẬT TRẠNG THÁI BÀN
 exports.updateStatus = async (req, res) => {
-  const { status } = req.body;
+  const { status, reserved_at } = req.body;
   try {
-    await db.query(
-      'UPDATE tables SET status=? WHERE id=?',
-      [status, req.params.id]
-    );
+    if (status === 'da_dat') {
+      const targetTime = reserved_at ? new Date(reserved_at) : new Date();
+      await db.query(
+        'UPDATE tables SET status=?, reserved_at=? WHERE id=?',
+        [status, targetTime, req.params.id]
+      );
+    } else {
+      await db.query(
+        'UPDATE tables SET status=?, reserved_at=NULL WHERE id=?',
+        [status, req.params.id]
+      );
+    }
     res.json({ message: 'Cập nhật trạng thái bàn thành công!' });
   } catch (err) {
     res.status(500).json({ message: 'Lỗi server', error: err.message });

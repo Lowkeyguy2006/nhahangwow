@@ -56,6 +56,14 @@ export default function Order() {
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [reservationModalOpen, setReservationModalOpen] = useState(false);
+  const [reserveTime, setReserveTime] = useState("");
+  const [reserveDate, setReserveDate] = useState("");
+  const [editOrderModalOpen, setEditOrderModalOpen] = useState(false);
+  const [editingOrderItem, setEditingOrderItem] = useState(null);
+  const [editOrderPrice, setEditOrderPrice] = useState("");
+  const [editOrderQty, setEditOrderQty] = useState("");
+  const [editOrderNote, setEditOrderNote] = useState("");
 
   // States for live Area/Table management inside table map
   const [isEditMode, setIsEditMode] = useState(false);
@@ -154,6 +162,75 @@ export default function Order() {
       setError(err.response?.data?.message || "Lỗi khi mở bàn.");
     } finally {
       setOrderLoading(false);
+    }
+  };
+
+  // Đặt trước bàn ăn
+  const handleReserveTable = async (dateStr, timeStr) => {
+    if (!selectedTable) return;
+    if (!dateStr || !timeStr) {
+      setError("Vui lòng chọn ngày và giờ hẹn trước khi đặt bàn.");
+      return;
+    }
+    
+    setOrderLoading(true);
+    setError("");
+    try {
+      const parsedTime = new Date(`${dateStr}T${timeStr}:00`);
+      await API.patch(`/api/tables/${selectedTable.id}/status`, {
+        status: "da_dat",
+        reserved_at: parsedTime.toISOString()
+      });
+      await fetchTables();
+      setSelectedTable(prev => ({ ...prev, status: "da_dat", reserved_at: parsedTime }));
+      setSuccess(`Đặt trước bàn thành công! Hệ thống sẽ giữ bàn đến ${timeStr} ngày ${dateStr} (hủy sau 30 phút nếu không tới).`);
+      setTimeout(() => setSuccess(""), 4000);
+      setReservationModalOpen(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi đặt bàn.");
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  // Hủy đặt trước bàn
+  const handleCancelReservation = async () => {
+    if (!selectedTable) return;
+    setOrderLoading(true);
+    setError("");
+    try {
+      await API.patch(`/api/tables/${selectedTable.id}/status`, {
+        status: "trong",
+      });
+      await fetchTables();
+      setSelectedTable(prev => ({ ...prev, status: "trong", reserved_at: null }));
+      setSuccess("Đã hủy đặt bàn. Bàn chuyển về trạng thái Trống.");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi hủy đặt bàn.");
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  // Lưu chỉnh sửa món ăn riêng biệt cho bàn (nháy đúp)
+  const handleSaveOrderItemEdit = async (e) => {
+    e.preventDefault();
+    if (!editingOrderItem || !activeOrder) return;
+    setError("");
+    try {
+      await API.put(`/api/orders/${activeOrder.id}/items/${editingOrderItem.id}`, {
+        quantity: Number(editOrderQty),
+        price: Number(editOrderPrice),
+        note: editOrderNote,
+      });
+      await fetchActiveOrder(selectedTable.id);
+      setEditOrderModalOpen(false);
+      setEditingOrderItem(null);
+      setSuccess("Cập nhật chi tiết món cho bàn thành công!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi cập nhật chi tiết món.");
     }
   };
 
@@ -503,6 +580,34 @@ export default function Order() {
     return remMins > 0 ? `${hours}g ${remMins}ph` : `${hours}g`;
   };
 
+  // Tính thời gian giữ bàn còn lại (30 phút đếm ngược sau khoảng thời gian đặt trước đã xác định)
+  const getReservationRemainingTime = (reservedAt) => {
+    if (!reservedAt) return "";
+    const reservedTime = new Date(reservedAt);
+    const now = currentTime || new Date();
+    const diffMs = now - reservedTime;
+
+    const formattedTime = reservedTime.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    if (diffMs < 0) {
+      // Trước giờ hẹn
+      const minsToArrival = Math.ceil(Math.abs(diffMs) / 60000);
+      return `Hẹn ${formattedTime} (Còn ${minsToArrival}ph)`;
+    } else {
+      // Đã quá giờ hẹn, bắt đầu tính 30 phút ân hạn
+      const totalDurationMs = 30 * 60 * 1000;
+      const remainingMs = totalDurationMs - diffMs;
+      if (remainingMs <= 0) return "Hết giờ giữ bàn";
+
+      const remainingMins = Math.floor(remainingMs / 60000);
+      const remainingSecs = Math.floor((remainingMs % 60000) / 1000);
+      return `Trễ khách: Giữ thêm ${remainingMins}ph ${remainingSecs < 10 ? '0' : ''}${remainingSecs}s`;
+    }
+  };
+
   return (
     <Layout>
       <div className="admin-page">
@@ -721,6 +826,12 @@ export default function Order() {
                                 {table.order_time ? getTableDuration(table.order_time) : "Đang ăn"}
                               </span>
                             )}
+                            {table.status === "da_dat" && (
+                              <span className="flex items-center gap-0.5 text-[11px] font-black text-blue-750">
+                                <Clock size={11} />
+                                {table.reserved_at ? getReservationRemainingTime(table.reserved_at) : "Đã đặt"}
+                              </span>
+                            )}
                           </div>
                         </button>
 
@@ -819,25 +930,81 @@ export default function Order() {
                     </div>
 
                     {/* Hóa đơn trống hoặc nút Mở bàn */}
-                    {selectedTable.status === "trong" ? (
+                    {selectedTable.status === "da_dat" ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-blue-200">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 mb-3 animate-pulse">
+                          <Clock size={24} weight="duotone" />
+                        </div>
+                        <h4 className="text-sm font-black text-blue-900 mb-2">BÀN ĐÃ ĐẶT TRƯỚC</h4>
+                        <p className="text-xs font-semibold text-slate-500 mb-4 max-w-[280px]">
+                          Khách đặt bàn này chưa vào ngồi ăn.
+                        </p>
+                        
+                        {selectedTable.reserved_at && (
+                          <div className="mb-6 rounded-xl bg-blue-50/50 border border-blue-100 px-5 py-3">
+                            <span className="block text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-1">
+                              THỜI GIAN GIỮ BÀN CÒN LẠI (30 PHÚT)
+                            </span>
+                            <span className="text-lg font-black text-blue-700 tabular-nums">
+                              {getReservationRemainingTime(selectedTable.reserved_at)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2 w-full max-w-[260px]">
+                          <button
+                            onClick={handleOpenTable}
+                            disabled={orderLoading}
+                            type="button"
+                            className="w-full rounded-xl bg-emerald-700 text-white font-black text-xs hover:bg-emerald-800 transition py-3 flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/10"
+                          >
+                            <Plus size={16} weight="bold" /> Khách đã tới - Mở bàn phục vụ
+                          </button>
+                          
+                          <button
+                            onClick={handleCancelReservation}
+                            disabled={orderLoading}
+                            type="button"
+                            className="w-full rounded-xl border border-red-200 bg-red-50/40 text-red-600 font-bold text-xs hover:bg-red-50 hover:text-red-700 transition py-2.5 flex items-center justify-center gap-1.5"
+                          >
+                            <X size={15} weight="bold" /> Hủy đặt trước (Trả về Trống)
+                          </button>
+                        </div>
+                      </div>
+                    ) : selectedTable.status === "trong" ? (
                       <div className="flex flex-col items-center justify-center py-16 text-center">
                         <p className="text-sm font-semibold text-slate-500 mb-5">
-                          Bàn hiện đang trống. Hãy tạo hóa đơn mới để bắt đầu gọi món.
+                          Bàn hiện đang trống. Hãy tạo hóa đơn mới để gọi món hoặc đặt trước bàn.
                         </p>
-                        <button
-                          onClick={handleOpenTable}
-                          disabled={orderLoading}
-                          type="button"
-                          className="admin-primary-btn px-6 py-5 rounded-2xl flex items-center gap-2 w-full max-w-[240px] text-sm justify-center shadow-md shadow-emerald-700/10"
-                        >
-                          {orderLoading ? (
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                          ) : (
-                            <>
-                              <Plus size={18} weight="bold" /> Mở bàn phục vụ
-                            </>
-                          )}
-                        </button>
+                        <div className="flex gap-2 w-full max-w-[340px]">
+                          <button
+                            onClick={handleOpenTable}
+                            disabled={orderLoading}
+                            type="button"
+                            className="flex-1 rounded-xl bg-emerald-700 text-white font-black text-xs hover:bg-emerald-800 transition py-3.5 flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-700/10"
+                          >
+                            <Plus size={16} weight="bold" /> Mở bàn phục vụ
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              const today = new Date().toISOString().split("T")[0];
+                              const nowTime = new Date().toLocaleTimeString("vi-VN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false
+                              });
+                              setReserveDate(today);
+                              setReserveTime(nowTime);
+                              setReservationModalOpen(true);
+                            }}
+                            disabled={orderLoading}
+                            type="button"
+                            className="flex-1 rounded-xl border border-blue-200 bg-blue-50/20 text-blue-700 font-bold text-xs hover:bg-blue-50 transition py-3.5 flex items-center justify-center gap-1.5"
+                          >
+                            <Clock size={16} weight="bold" /> Đặt trước bàn
+                          </button>
+                        </div>
                       </div>
                     ) : orderLoading && !activeOrder ? (
                       <div className="flex flex-col items-center justify-center py-16">
@@ -857,6 +1024,7 @@ export default function Order() {
                               <thead>
                                 <tr className="text-[10px] text-slate-400/90 font-black tracking-wider">
                                   <th className="pl-3 py-2 text-left">MÓN</th>
+                                  <th className="py-2 text-center">ĐVT</th>
                                   <th className="py-2 text-center">SL</th>
                                   <th className="py-2 text-right">GIÁ</th>
                                   <th className="pr-3 py-2 text-right">TỔNG</th>
@@ -865,10 +1033,21 @@ export default function Order() {
                               </thead>
                               <tbody>
                                 {activeOrder.items?.map((item) => {
-                                  const isPending = item.status === "cho";
+                                  const isPending = true; 
                                   const itemTotal = item.price * item.quantity;
                                   return (
-                                    <tr key={item.id} className="text-xs hover:bg-slate-50/50">
+                                    <tr
+                                      key={item.id}
+                                      onDoubleClick={() => {
+                                        setEditingOrderItem(item);
+                                        setEditOrderPrice(item.price.toString());
+                                        setEditOrderQty(item.quantity.toString());
+                                        setEditOrderNote(item.note || "");
+                                        setEditOrderModalOpen(true);
+                                      }}
+                                      className="text-xs hover:bg-slate-50/50 cursor-pointer select-none"
+                                      title="Nhấp đúp để sửa nhanh giá/số lượng món này"
+                                    >
                                       {/* Tên món & Ghi chú */}
                                       <td className="pl-3 py-2">
                                         <div className="font-bold text-slate-800">{item.mon_ten}</div>
@@ -893,21 +1072,35 @@ export default function Order() {
                                           )
                                         )}
                                       </td>
+
+                                      {/* Đơn vị tính */}
+                                      <td className="py-2 text-center text-[11px] font-bold text-slate-500">
+                                        {item.unit || "phần"}
+                                      </td>
                                       
                                       {/* Số lượng */}
                                       <td className="py-2 text-center">
                                         {isPending ? (
                                           <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-0.5">
                                             <button
-                                              onClick={() => handleUpdateItem(item.id, item.quantity - 1, item.note)}
+                                              onClick={() => {
+                                                if (item.quantity > 1) {
+                                                  handleUpdateItem(item.id, Math.floor(item.quantity) - 1, item.note);
+                                                }
+                                              }}
                                               type="button"
-                                              className="flex h-5 w-5 items-center justify-center rounded bg-slate-50 text-slate-600 transition hover:bg-slate-100"
+                                              disabled={item.quantity <= 1}
+                                              className={`flex h-5 w-5 items-center justify-center rounded transition ${
+                                                item.quantity <= 1
+                                                  ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                                                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                              }`}
                                             >
                                               <Minus size={11} />
                                             </button>
-                                            <span className="text-[11px] font-black w-3 text-center">{item.quantity}</span>
+                                            <span className="text-[11px] font-black w-3 text-center">{Number(item.quantity)}</span>
                                             <button
-                                              onClick={() => handleUpdateItem(item.id, item.quantity + 1, item.note)}
+                                              onClick={() => handleUpdateItem(item.id, Math.floor(item.quantity) + 1, item.note)}
                                               type="button"
                                               className="flex h-5 w-5 items-center justify-center rounded bg-slate-50 text-slate-600 transition hover:bg-slate-100"
                                             >
@@ -916,7 +1109,7 @@ export default function Order() {
                                           </div>
                                         ) : (
                                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-[11px] font-black text-slate-600">
-                                            SL: {item.quantity}
+                                            SL: {Number(item.quantity)}
                                           </span>
                                         )}
                                       </td>
@@ -1020,7 +1213,8 @@ export default function Order() {
                   {selectedTable.status === "dang_dung" && activeOrder && (
                     <div className="mt-6 border-t border-slate-100 pt-4 space-y-3">
                       
-                      {/* Gửi chế biến bếp */}
+                      {/* Ẩn nút gửi chế biến bếp theo yêu cầu của user */}
+                      {/* 
                       <button
                         onClick={handleSendToKitchen}
                         disabled={!activeOrder.items?.some((i) => i.status === "cho")}
@@ -1029,6 +1223,7 @@ export default function Order() {
                       >
                         <BowlFood size={18} /> In chế biến (Gửi yêu cầu bếp)
                       </button>
+                      */}
 
                       {/* Tiện ích POS */}
                       <div className="grid grid-cols-3 gap-2">
@@ -1678,6 +1873,176 @@ export default function Order() {
                   className="flex-1 rounded-xl bg-emerald-700 text-white font-black text-xs hover:bg-emerald-800 transition"
                 >
                   {editingTable ? "Cập nhật" : "Lưu bàn mới"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: ĐẶT TRƯỚC BÀN ĂN (RESERVATION TIME SELECTOR)
+      ======================================================== */}
+      {reservationModalOpen && selectedTable && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-950 flex items-center gap-1.5">
+                <Clock size={18} className="text-emerald-700" /> Đặt trước {selectedTable.name}
+              </h3>
+              <button
+                onClick={() => setReservationModalOpen(false)}
+                type="button"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleReserveTable(reserveDate, reserveTime);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="admin-label mb-1.5 flex items-center gap-1">
+                  Chọn ngày hẹn <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={reserveDate}
+                  onChange={(e) => setReserveDate(e.target.value)}
+                  className="admin-field h-10"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="admin-label mb-1.5 flex items-center gap-1">
+                  Giờ hẹn đến <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={reserveTime}
+                  onChange={(e) => setReserveTime(e.target.value)}
+                  className="admin-field h-10"
+                  required
+                />
+              </div>
+
+              <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-[11px] font-bold text-blue-800 leading-relaxed">
+                ★ Hệ thống sẽ tự động giải phóng bàn về trạng thái Trống sau 30 phút tính từ giờ hẹn khách đến nêu trên (nếu khách không tới).
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setReservationModalOpen(false)}
+                  type="button"
+                  className="flex-1 admin-secondary-btn h-10 rounded-xl text-xs"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-emerald-700 text-white font-black text-xs hover:bg-emerald-800 transition"
+                >
+                  Xác nhận đặt bàn
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: CHỈNH SỬA CHI TIẾT MÓN ĂN TRÊN BÀN (NHÁY ĐÚP)
+      ======================================================== */}
+      {editOrderModalOpen && editingOrderItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-950 flex items-center gap-1.5">
+                <ForkKnife size={18} className="text-emerald-700" /> Tùy chỉnh: {editingOrderItem.mon_ten}
+              </h3>
+              <button
+                onClick={() => {
+                  setEditOrderModalOpen(false);
+                  setEditingOrderItem(null);
+                }}
+                type="button"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveOrderItemEdit} className="space-y-4">
+              <div>
+                <label className="admin-label mb-1.5">
+                  Số lượng (ĐVT: {editingOrderItem.unit || "phần"})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={editOrderQty}
+                  onChange={(e) => setEditOrderQty(e.target.value)}
+                  className="admin-field h-10"
+                  required
+                />
+                <span className="text-[10px] text-slate-400 font-semibold mt-1 block">
+                  *Cho phép nhập số thập phân (ví dụ: 1.5, 0.8)
+                </span>
+              </div>
+
+              <div>
+                <label className="admin-label mb-1.5">
+                  Đơn giá cho bàn này (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editOrderPrice}
+                  onChange={(e) => setEditOrderPrice(e.target.value)}
+                  className="admin-field h-10"
+                  required
+                />
+                <span className="text-[10px] text-slate-400 font-semibold mt-1 block">
+                  *Giá chuẩn: {formatMoney(editingOrderItem.price)} (không đổi trên thực đơn chính)
+                </span>
+              </div>
+
+              <div>
+                <label className="admin-label mb-1.5">
+                  Ghi chú riêng của món
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ghi chú chế biến (ví dụ: ít cay, nhiều hành)..."
+                  value={editOrderNote}
+                  onChange={(e) => setEditOrderNote(e.target.value)}
+                  className="admin-field h-10"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setEditOrderModalOpen(false);
+                    setEditingOrderItem(null);
+                  }}
+                  type="button"
+                  className="flex-1 admin-secondary-btn h-10 rounded-xl text-xs"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-emerald-700 text-white font-black text-xs hover:bg-emerald-800 transition"
+                >
+                  Lưu thay đổi
                 </button>
               </div>
             </form>
